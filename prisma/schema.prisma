@@ -1,0 +1,873 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../backend/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  TRADER
+  MENTOR
+  INSTITUTE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REVOKED
+  EXPIRED
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  OPEN
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+enum AssetClass {
+  EQUITY
+  FUTURES
+  OPTIONS
+  COMMODITY
+  CURRENCY
+}
+
+enum TradingSegment {
+  INTRADAY
+  SWING
+  POSITIONAL
+  FNO
+}
+
+enum RuleFindingStatus {
+  PASSED
+  VIOLATION
+  INSUFFICIENT_DATA
+}
+
+enum DisputeStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+}
+
+enum TestStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  SCORED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum NotificationType {
+  INVITATION
+  TEST_ASSIGNED
+  FEEDBACK
+  DISPUTE_RESOLVED
+  SYSTEM
+  MENTOR_REVIEW
+}
+
+enum MistakeTag {
+  FOMO_ENTRY
+  REVENGE_TRADING
+  EARLY_EXIT
+  MOVED_STOP_LOSS
+  OVERTRADING
+  EXCESSIVE_POSITION_SIZE
+}
+
+enum EmotionCheck {
+  CONFIDENT
+  NERVOUS
+  GREEDY
+  FEARFUL
+  NEUTRAL
+  IMPATIENT
+}
+
+// ─── User & Profiles ───────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile         UserProfile?
+  studentProfile  StudentProfile?
+  traderProfile   TraderProfile?
+  mentorProfile   MentorProfile?
+  instituteProfile InstituteProfile?
+
+  riskPreferences  RiskPreference[]
+  tradingStrategies TradingStrategy[]
+
+  // As student/trader
+  portfolios       VirtualPortfolio[]
+  journalEntries   JournalEntry[]
+  findings         RuleFinding[]
+  disputes         RuleDispute[]       @relation("StudentDisputes")
+
+  // As mentor
+  createdInvitations  Invitation[]    @relation("MentorInvitations")
+  mentorConnections   MentorStudentConnection[] @relation("MentorConnections")
+  studentConnections  MentorStudentConnection[] @relation("StudentConnections")
+  createdTests        Test[]          @relation("MentorTests")
+  givenFeedback       Feedback[]      @relation("MentorFeedback")
+  resolvedDisputes    RuleDispute[]   @relation("MentorDisputes")
+
+  // Test taking
+  testAssignments  TestAssignment[] @relation("UserAssignments")
+  testAttempts     TestAttempt[]
+
+  aiAnalyses       AIAnalysis[]
+  notifications    Notification[]
+  consentRecords   ConsentRecord[]
+  auditLogs        AuditLog[]
+
+  // Learning
+  exerciseAssignments ExerciseAssignment[] @relation("UserExercises")
+  assignedExercises   ExerciseAssignment[] @relation("AssignedByMentor")
+
+  refreshTokens    RefreshToken[]
+  scenarioAttempts ScenarioAttempt[]
+  createdScenarios TradingScenario[] @relation("CreatedScenarios")
+
+  @@index([email])
+  @@index([role])
+}
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  phone       String?
+  city        String?
+  state       String?
+  bio         String?
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model StudentProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tradingExperience String?  // e.g. "beginner", "1-2 years"
+  learningGoals     String?
+  preferredSegments TradingSegment[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model TraderProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tradingExperience String?
+  preferredSegments TradingSegment[]
+  primaryAssets     AssetClass[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model MentorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialisation  String?
+  certifications  String?
+  yearsExperience Int?
+  linkedIn        String?
+  website         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cohorts         Cohort[]
+}
+
+model InstituteProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instituteName   String
+  registrationNo  String?
+  website         String?
+  address         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cohorts         Cohort[]
+}
+
+// ─── Mentor-Student Connections ────────────────────────────────────────────
+
+model Invitation {
+  id          String           @id @default(cuid())
+  mentorId    String
+  mentor      User             @relation("MentorInvitations", fields: [mentorId], references: [id])
+  code        String           @unique
+  cohortId    String?
+  cohort      Cohort?          @relation(fields: [cohortId], references: [id])
+  maxUses     Int              @default(1)
+  usedCount   Int              @default(0)
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  connections MentorStudentConnection[]
+
+  @@index([code])
+  @@index([mentorId])
+}
+
+model MentorStudentConnection {
+  id           String          @id @default(cuid())
+  mentorId     String
+  mentor       User            @relation("MentorConnections", fields: [mentorId], references: [id])
+  studentId    String
+  student      User            @relation("StudentConnections", fields: [studentId], references: [id])
+  invitationId String?
+  invitation   Invitation?     @relation(fields: [invitationId], references: [id])
+  status       ConnectionStatus @default(ACTIVE)
+  permissions  Json            @default("{\"viewJournal\": true, \"viewFindings\": true, \"viewPortfolio\": false}")
+  connectedAt  DateTime        @default(now())
+  revokedAt    DateTime?
+  consentRecordId String?
+
+  @@unique([mentorId, studentId])
+  @@index([mentorId])
+  @@index([studentId])
+}
+
+// ─── Cohorts ───────────────────────────────────────────────────────────────
+
+model Cohort {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  mentorId    String?
+  mentor      MentorProfile? @relation(fields: [mentorId], references: [id])
+  instituteId String?
+  institute   InstituteProfile? @relation(fields: [instituteId], references: [id])
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     CohortMember[]
+  invitations Invitation[]
+  testAssignments TestAssignment[]
+}
+
+model CohortMember {
+  id        String   @id @default(cuid())
+  cohortId  String
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  @@unique([cohortId, userId])
+  @@index([cohortId])
+  @@index([userId])
+}
+
+// ─── Virtual Portfolio & Trading ──────────────────────────────────────────
+
+model VirtualPortfolio {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String   @default("My Portfolio")
+  portfolioType    String   @default("DEMO") // DEMO | FICTIONAL
+  initialBalance   Decimal  @default(500000)
+  cashBalance      Decimal  @default(500000)
+  totalValue       Decimal  @default(500000)
+  realisedPnl      Decimal  @default(0)
+  unrealisedPnl    Decimal  @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  orders           VirtualOrder[]
+  positions        VirtualPosition[]
+  trades           SimulatedTrade[]
+
+  @@index([userId])
+}
+
+model VirtualOrder {
+  id            String       @id @default(cuid())
+  portfolioId   String
+  portfolio     VirtualPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  userId        String
+  instrument    String
+  assetClass    AssetClass   @default(EQUITY)
+  segment       TradingSegment @default(INTRADAY)
+  side          OrderSide
+  quantity      Int
+  price         Decimal
+  orderValue    Decimal
+  status        OrderStatus  @default(OPEN)
+  notes         String?
+  placedAt      DateTime     @default(now())
+  filledAt      DateTime?
+  cancelledAt   DateTime?
+
+  trade         SimulatedTrade?
+
+  @@index([portfolioId])
+  @@index([userId])
+  @@index([placedAt])
+}
+
+model VirtualPosition {
+  id               String       @id @default(cuid())
+  portfolioId      String
+  portfolio        VirtualPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  userId           String
+  instrument       String
+  assetClass       AssetClass   @default(EQUITY)
+  segment          TradingSegment @default(INTRADAY)
+  side             OrderSide
+  quantity         Int
+  averagePrice     Decimal
+  currentPrice     Decimal
+  unrealisedPnl    Decimal      @default(0)
+  investedValue    Decimal
+  currentValue     Decimal
+  openedAt         DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([portfolioId, instrument, side])
+  @@index([portfolioId])
+  @@index([userId])
+}
+
+model SimulatedTrade {
+  id             String          @id @default(cuid())
+  portfolioId    String
+  portfolio      VirtualPortfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  userId         String
+  orderId        String          @unique
+  order          VirtualOrder    @relation(fields: [orderId], references: [id])
+  instrument     String
+  assetClass     AssetClass      @default(EQUITY)
+  segment        TradingSegment  @default(INTRADAY)
+  side           OrderSide
+  quantity       Int
+  entryPrice     Decimal
+  exitPrice      Decimal?
+  realisedPnl    Decimal         @default(0)
+  isOpen         Boolean         @default(true)
+  openedAt       DateTime        @default(now())
+  closedAt       DateTime?
+
+  @@index([portfolioId])
+  @@index([userId])
+  @@index([openedAt])
+}
+
+// ─── Market Simulation ─────────────────────────────────────────────────────
+
+model MarketCandle {
+  id        String   @id @default(cuid())
+  symbol    String
+  timeframe String   // 1m | 5m | 15m | 30m | 1h | 4h | 1d | 1w
+  time      DateTime
+  open      Decimal
+  high      Decimal
+  low       Decimal
+  close     Decimal
+  volume    Int      @default(0)
+
+  @@unique([symbol, timeframe, time])
+  @@index([symbol, timeframe])
+}
+
+// ─── Trading Journal ───────────────────────────────────────────────────────
+
+model TradingStrategy {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  journalEntries JournalEntry[]
+
+  @@unique([userId, name])
+}
+
+model JournalEntry {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyId      String?
+  strategy        TradingStrategy? @relation(fields: [strategyId], references: [id])
+
+  instrument      String
+  assetClass      AssetClass
+  segment         TradingSegment
+  side            OrderSide
+  entryPrice      Decimal
+  exitPrice       Decimal?
+  quantity        Int
+  entryAt         DateTime
+  exitAt          DateTime?
+  plannedStopLoss Decimal?
+  plannedTarget   Decimal?
+  realisedPnl     Decimal?
+  riskRewardPlanned Decimal?
+
+  notes           String?
+  emotionCheck    EmotionCheck?
+  mistakeTags     MistakeTag[]
+  isOpen          Boolean         @default(true)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  findings        RuleFinding[]
+
+  @@index([userId])
+  @@index([entryAt])
+  @@index([assetClass])
+  @@index([segment])
+}
+
+// ─── Risk Preferences ─────────────────────────────────────────────────────
+
+model RiskPreference {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  maxRiskPerTradePct   Decimal  @default(1.0)
+  maxTradesPerDay      Int      @default(5)
+  maxDailyLossPct      Decimal  @default(3.0)
+  defaultCapital       Decimal  @default(500000)
+  isDefault            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ─── Rule Engine ───────────────────────────────────────────────────────────
+
+model Rule {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  category    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  versions    RuleVersion[]
+}
+
+model RuleVersion {
+  id          String   @id @default(cuid())
+  ruleId      String
+  rule        Rule     @relation(fields: [ruleId], references: [id])
+  version     String
+  logic       Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  findings    RuleFinding[]
+
+  @@unique([ruleId, version])
+}
+
+model RuleFinding {
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  ruleVersionId    String
+  ruleVersion      RuleVersion        @relation(fields: [ruleVersionId], references: [id])
+  journalEntryId   String?
+  journalEntry     JournalEntry?      @relation(fields: [journalEntryId], references: [id])
+  status           RuleFindingStatus
+  inputValues      Json
+  calculation      String?
+  explanation      String
+  tradeReference   String?
+  evaluatedAt      DateTime           @default(now())
+
+  disputes         RuleDispute[]
+
+  @@index([userId])
+  @@index([ruleVersionId])
+  @@index([journalEntryId])
+}
+
+model RuleDispute {
+  id            String        @id @default(cuid())
+  findingId     String
+  finding       RuleFinding   @relation(fields: [findingId], references: [id])
+  studentId     String
+  student       User          @relation("StudentDisputes", fields: [studentId], references: [id])
+  mentorId      String?
+  mentor        User?         @relation("MentorDisputes", fields: [mentorId], references: [id])
+  reason        String
+  evidence      String?
+  status        DisputeStatus @default(OPEN)
+  resolution    String?
+  createdAt     DateTime      @default(now())
+  resolvedAt    DateTime?
+
+  @@index([findingId])
+  @@index([studentId])
+  @@index([mentorId])
+}
+
+// ─── Tests & Assessments ──────────────────────────────────────────────────
+
+model Test {
+  id          String     @id @default(cuid())
+  creatorId   String
+  creator     User       @relation("MentorTests", fields: [creatorId], references: [id])
+  title       String
+  description String?
+  topic       String
+  difficulty  Difficulty @default(BEGINNER)
+  durationMin Int        @default(30)
+  status      TestStatus @default(DRAFT)
+  isSelfTest  Boolean    @default(false)
+  isSystem    Boolean    @default(false)   // platform-created test, visible to all roles
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  questions   TestQuestion[]
+  assignments TestAssignment[]
+  attempts    TestAttempt[]
+
+  @@index([creatorId])
+}
+
+model TestQuestion {
+  id           String   @id @default(cuid())
+  testId       String
+  test         Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questionText String
+  explanation  String?
+  orderIndex   Int      @default(0)
+  marks        Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  options      TestOption[]
+  answers      TestAnswer[]
+
+  @@index([testId])
+}
+
+model TestOption {
+  id         String       @id @default(cuid())
+  questionId String
+  question   TestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  optionText String
+  isCorrect  Boolean      @default(false)
+  orderIndex Int          @default(0)
+
+  @@index([questionId])
+}
+
+model TestAssignment {
+  id           String   @id @default(cuid())
+  testId       String
+  test         Test     @relation(fields: [testId], references: [id])
+  assignedTo   String?
+  assignedUser User?    @relation("UserAssignments", fields: [assignedTo], references: [id])
+  cohortId     String?
+  cohort       Cohort?  @relation(fields: [cohortId], references: [id])
+  dueAt        DateTime?
+  assignedAt   DateTime @default(now())
+
+  @@index([testId])
+  @@index([assignedTo])
+  @@index([cohortId])
+}
+
+model TestAttempt {
+  id          String        @id @default(cuid())
+  testId      String
+  test        Test          @relation(fields: [testId], references: [id])
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  status      AttemptStatus @default(IN_PROGRESS)
+  score       Int?
+  maxScore    Int?
+  percentage  Decimal?
+  startedAt   DateTime      @default(now())
+  submittedAt DateTime?
+  scoredAt    DateTime?
+
+  answers     TestAnswer[]
+
+  @@index([testId])
+  @@index([userId])
+}
+
+model TestAnswer {
+  id           String       @id @default(cuid())
+  attemptId    String
+  attempt      TestAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     TestQuestion @relation(fields: [questionId], references: [id])
+  selectedOptionId String?
+  isCorrect    Boolean?
+  marksAwarded Int          @default(0)
+  answeredAt   DateTime     @default(now())
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+// ─── Learning Hub ─────────────────────────────────────────────────────────
+
+model LearningResource {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  category    String
+  topic       String
+  content     String
+  difficulty  Difficulty @default(BEGINNER)
+  readingMin  Int      @default(5)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercises   Exercise[]
+}
+
+model Exercise {
+  id          String   @id @default(cuid())
+  resourceId  String?
+  resource    LearningResource? @relation(fields: [resourceId], references: [id])
+  title       String
+  description String
+  exerciseType String  // READING | QUIZ | PRACTICE | REFLECTION
+  content     Json?
+  createdAt   DateTime @default(now())
+
+  assignments ExerciseAssignment[]
+}
+
+model ExerciseAssignment {
+  id          String   @id @default(cuid())
+  exerciseId  String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id])
+  userId      String
+  user        User     @relation("UserExercises", fields: [userId], references: [id])
+  assignedBy  String?
+  assigner    User?    @relation("AssignedByMentor", fields: [assignedBy], references: [id])
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  dueAt       DateTime?
+  assignedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([exerciseId])
+}
+
+// ─── Feedback ─────────────────────────────────────────────────────────────
+
+model Feedback {
+  id          String   @id @default(cuid())
+  mentorId    String
+  mentor      User     @relation("MentorFeedback", fields: [mentorId], references: [id])
+  studentId   String
+  content     String
+  feedbackType String  // GENERAL | TRADE_REVIEW | TEST_REVIEW | EXERCISE
+  referenceId  String? // journalEntryId, testAttemptId, etc.
+  createdAt   DateTime @default(now())
+
+  @@index([mentorId])
+  @@index([studentId])
+}
+
+// ─── AI Analysis ──────────────────────────────────────────────────────────
+
+model AIAnalysis {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  observations    Json
+  supportingData  Json
+  generatedAt     DateTime @default(now())
+  model           String   @default("deterministic-v1")
+  periodStart     DateTime?
+  periodEnd       DateTime?
+
+  @@index([userId])
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  referenceId String?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ─── Consent Records ──────────────────────────────────────────────────────
+
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  consentType String
+  granted     Boolean
+  grantedAt   DateTime @default(now())
+  revokedAt   DateTime?
+  metadata    Json?
+
+  @@index([userId])
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  resource    String
+  resourceId  String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Refresh Tokens ───────────────────────────────────────────────────────
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ─── Trading Scenarios (Practical Assessments + Historical Practice) ──────
+
+model TradingScenario {
+  id              String     @id @default(cuid())
+  slug            String     @unique
+  title           String
+  instrument      String     // e.g. NIFTY_50, RELIANCE, ATEC
+  instrumentType  String     @default("FICTIONAL") // INDEX | EQUITY | FICTIONAL
+  difficulty      Difficulty @default(BEGINNER)
+  description     String     // Situation context shown to the user
+  context         String     // Detailed market narrative
+  chartBefore     Json       // Array of { time, open, high, low, close, volume } before decision
+  chartAfter      Json       // Array of { time, open, high, low, close, volume } after decision (hidden)
+  newsHeadline    String?
+  newsBody        String?
+  newsCategory    String?    // EARNINGS | POLICY | MACRO | TECHNICAL | SECTOR
+  dataSource      String     @default("SYNTHETIC") // SYNTHETIC | HISTORICAL_ILLUSTRATIVE
+  scenarioType    String     @default("HISTORICAL_PRACTICE") // HISTORICAL_PRACTICE | ASSESSMENT
+  subsequentMove  Decimal?   // % price change in the outcome window
+  outcomeDirection String?   // UP | DOWN | SIDEWAYS
+  outcome         String     // Narrative of what happened after the decision
+  teachingPoints  Json       // String[] — key lessons
+  rubric          Json       // { criteria: [{name, maxScore, description}] }
+  passingScore    Int        @default(60)
+  isPublished     Boolean    @default(false)
+  isSystem        Boolean    @default(false)
+  creatorId       String?
+  creator         User?      @relation("CreatedScenarios", fields: [creatorId], references: [id])
+  orderIndex      Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  attempts        ScenarioAttempt[]
+
+  @@index([instrument])
+  @@index([difficulty])
+  @@index([isPublished])
+  @@index([scenarioType])
+}
+
+model ScenarioAttempt {
+  id              String          @id @default(cuid())
+  scenarioId      String
+  scenario        TradingScenario @relation(fields: [scenarioId], references: [id])
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  decision        String          // BUY | SELL | WAIT
+  reasoning       String
+  entryPrice      Decimal?
+  stopLoss        Decimal?
+  target          Decimal?
+  confidence      Int?            // 1–5
+  score           Int?            // 0–100
+  rubricResult    Json?           // { criteria: [{name, awarded, max, comment}] }
+  feedbackText    String?
+  startedAt       DateTime        @default(now())
+  submittedAt     DateTime?
+
+  @@index([userId])
+  @@index([scenarioId])
+  @@index([userId, scenarioId])
+}
