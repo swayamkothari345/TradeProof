@@ -56,6 +56,26 @@ export async function getCohortMembers(userId, cohortId) {
   });
 }
 
+export async function addCohortMember(userId, cohortId, studentId) {
+  const profile = await getInstituteProfile(userId);
+  const cohort = await prisma.cohort.findFirst({ where: { id: cohortId, instituteId: profile.id } });
+  if (!cohort) throw createError(404, 'Cohort not found.');
+  // Upsert — silently succeeds if already a member
+  return prisma.cohortMember.upsert({
+    where: { cohortId_userId: { cohortId, userId: studentId } },
+    create: { cohortId, userId: studentId },
+    update: {},
+  });
+}
+
+export async function removeCohortMember(userId, cohortId, studentId) {
+  const profile = await getInstituteProfile(userId);
+  const cohort = await prisma.cohort.findFirst({ where: { id: cohortId, instituteId: profile.id } });
+  if (!cohort) throw createError(404, 'Cohort not found.');
+  await prisma.cohortMember.deleteMany({ where: { cohortId, userId: studentId } });
+  return true;
+}
+
 export async function getInstituteStudents(userId) {
   // All students connected to the institute account via MentorStudentConnection
   return prisma.mentorStudentConnection.findMany({

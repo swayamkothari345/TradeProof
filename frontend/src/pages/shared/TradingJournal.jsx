@@ -150,8 +150,9 @@ export default function TradingJournal() {
             { label: 'Open Trades', value: stats.openTrades },
           ].map(({ label, value, pnl }) => (
             <div key={label} className="card p-3 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-              <p className={`text-lg font-semibold mt-1 ${pnl !== undefined ? pnlClass(pnl) : 'text-gray-900 dark:text-gray-100'}`}>{value}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>{label}</p>
+              <p className={`text-[17px] font-semibold mt-1 tabular-nums ${pnl !== undefined ? pnlClass(pnl) : ''}`}
+                style={pnl === undefined ? { color: 'var(--text)' } : undefined}>{value}</p>
             </div>
           ))}
         </div>
@@ -207,36 +208,45 @@ export default function TradingJournal() {
                 <tr key={entry.id}>
                   <td>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{entry.instrument}</p>
-                      <p className="text-xs text-gray-400">{entry.assetClass}</p>
+                      <p className="font-medium" style={{ color: 'var(--text)' }}>{entry.instrument}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{entry.assetClass}</p>
                     </div>
                   </td>
                   <td><span className="badge-gray">{entry.segment}</span></td>
                   <td>
                     <span className={entry.side === 'BUY' ? 'badge-green' : 'badge-red'}>{entry.side}</span>
                   </td>
-                  <td className="font-mono text-xs">{formatCurrency(entry.entryPrice)}</td>
-                  <td className="font-mono text-xs">{entry.exitPrice ? formatCurrency(entry.exitPrice) : '—'}</td>
+                  <td className="font-mono text-[12px]">{formatCurrency(entry.entryPrice)}</td>
+                  <td className="font-mono text-[12px]">{entry.exitPrice ? formatCurrency(entry.exitPrice) : '—'}</td>
                   <td>{entry.quantity}</td>
-                  <td className={`font-mono text-xs font-medium ${pnlClass(entry.realisedPnl)}`}>
+                  <td className={`font-mono text-[12px] font-medium ${pnlClass(entry.realisedPnl)}`}>
                     {entry.isOpen ? <span className="badge-amber">Open</span> : (entry.realisedPnl != null ? formatCurrency(entry.realisedPnl) : '—')}
                   </td>
-                  <td className="text-xs text-gray-500">{entry.strategy?.name ?? '—'}</td>
-                  <td className="text-xs text-gray-400">{formatDateTime(entry.entryAt)}</td>
+                  <td className="text-[12px]" style={{ color: 'var(--text-3)' }}>{entry.strategy?.name ?? '—'}</td>
+                  <td className="text-[11px]" style={{ color: 'var(--text-3)' }}>{formatDateTime(entry.entryAt)}</td>
                   <td>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       <button onClick={() => evaluateMutation.mutate(entry.id)}
-                        className="p-1 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: 'var(--text-3)' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-raised)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                         title="Run rule evaluation">
-                        <RefreshCw size={13} className={evaluateMutation.isPending ? 'animate-spin' : ''} />
+                        <RefreshCw size={12} className={evaluateMutation.isPending ? 'animate-spin' : ''} />
                       </button>
                       <button onClick={() => openEdit(entry)}
-                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                        <Edit size={13} />
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: 'var(--text-3)' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--info)'; e.currentTarget.style.backgroundColor = 'var(--bg-raised)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
+                        <Edit size={12} />
                       </button>
                       <button onClick={() => setDeleteId(entry.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <Trash2 size={13} />
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: 'var(--text-3)' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--neg)'; e.currentTarget.style.backgroundColor = 'var(--bg-raised)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </td>
@@ -250,11 +260,11 @@ export default function TradingJournal() {
       {/* Pagination */}
       {data?.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-500">Showing {data.entries.length} of {data.total} entries</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>Showing {data.entries.length} of {data.total} entries</p>
           <div className="flex gap-2">
             <Button size="xs" variant="secondary" disabled={filters.page <= 1}
               onClick={() => setFilters(f => ({ ...f, page: f.page - 1 }))}>Previous</Button>
-            <span className="text-xs text-gray-500 self-center">Page {filters.page} of {data.totalPages}</span>
+            <span className="text-[12px] self-center" style={{ color: 'var(--text-3)' }}>Page {filters.page} of {data.totalPages}</span>
             <Button size="xs" variant="secondary" disabled={filters.page >= data.totalPages}
               onClick={() => setFilters(f => ({ ...f, page: f.page + 1 }))}>Next</Button>
           </div>
@@ -350,7 +360,7 @@ export default function TradingJournal() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label">Emotion Check-in</label>
               <select className="input" value={form.emotionCheck}
@@ -371,11 +381,12 @@ export default function TradingJournal() {
             <div className="flex flex-wrap gap-2">
               {MISTAKE_TAGS.map(({ value, label }) => (
                 <button key={value} type="button" onClick={() => toggleMistakeTag(value)}
-                  className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
-                    form.mistakeTags.includes(value)
-                      ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-400'
-                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400'
-                  }`}>
+                  className="text-xs px-2.5 py-1 rounded-full border font-medium transition-colors"
+                  style={{
+                    backgroundColor: form.mistakeTags.includes(value) ? 'rgba(239,68,68,0.12)' : 'transparent',
+                    borderColor: form.mistakeTags.includes(value) ? 'rgba(239,68,68,0.5)' : 'var(--border)',
+                    color: form.mistakeTags.includes(value) ? 'var(--neg)' : 'var(--text-3)',
+                  }}>
                   {label}
                 </button>
               ))}
@@ -383,7 +394,7 @@ export default function TradingJournal() {
           </div>
 
           {(createMutation.error || updateMutation.error) && (
-            <p className="text-sm text-red-600 dark:text-red-400">
+            <p className="text-sm" style={{ color: 'var(--neg)' }}>
               {createMutation.error?.response?.data?.message || updateMutation.error?.response?.data?.message || 'An error occurred.'}
             </p>
           )}

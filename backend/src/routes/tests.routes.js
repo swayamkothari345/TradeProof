@@ -11,6 +11,9 @@ router.use(authenticate);
 router.post('/', authorize('MENTOR', 'INSTITUTE'), validate(createTestSchema), testsController.createTest);
 router.patch('/:id/publish', authorize('MENTOR', 'INSTITUTE'), testsController.publishTest);
 router.post('/:id/assign', authorize('MENTOR', 'INSTITUTE'), validate(assignTestSchema), testsController.assignTest);
+router.post('/assignments', authorize('MENTOR', 'INSTITUTE'), testsController.createBulkAssignment);
+router.get('/assignments', authorize('MENTOR', 'INSTITUTE'), testsController.getMentorAssignments);
+router.get('/assignments/:batchId', authorize('MENTOR', 'INSTITUTE'), testsController.getAssignmentBatch);
 
 // All roles
 router.get('/library', testsController.getTestLibrary);

@@ -41,5 +41,5 @@ export function pnlClass(value) {
   const num = Number(value ?? 0);
   if (num > 0) return 'pnl-positive';
   if (num < 0) return 'pnl-negative';
-  return 'text-gray-500 dark:text-gray-400';
+  return 'pnl-neutral';
 }

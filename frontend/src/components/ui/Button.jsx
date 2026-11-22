@@ -3,18 +3,18 @@ import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
 
 const variants = {
-  primary: 'bg-teal-600 hover:bg-teal-700 text-white border-transparent',
-  secondary: 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
-  danger: 'bg-red-600 hover:bg-red-700 text-white border-transparent',
-  ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 border-transparent',
-  outline: 'bg-transparent hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-700 dark:text-teal-400 border-teal-600 dark:border-teal-500',
+  primary:   'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white border-transparent',
+  secondary: 'border-[var(--border-strong)] hover:border-[var(--border-strong)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--bg-raised)]',
+  danger:    'bg-red-600 hover:bg-red-500 text-white border-transparent',
+  ghost:     'bg-transparent hover:bg-[var(--bg-raised)] text-[var(--text-2)] hover:text-[var(--text)] border-transparent',
+  outline:   'bg-transparent hover:bg-[var(--accent-subtle)] text-[var(--accent)] border-[var(--accent)] hover:border-[var(--accent-hover)]',
 };
 
 const sizes = {
-  xs: 'px-2.5 py-1 text-xs',
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-base',
+  xs: 'px-2.5 py-1 text-xs gap-1.5',
+  sm: 'px-3 py-1.5 text-[13px] gap-1.5',
+  md: 'px-4 py-2 text-[13px] gap-2',
+  lg: 'px-5 py-2.5 text-sm gap-2',
 };
 
 export default function Button({
@@ -32,18 +32,20 @@ export default function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 font-medium rounded-md border transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center font-medium rounded-md border transition-all duration-100',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        'bg-[var(--bg-surface)]',
         variants[variant],
         sizes[size],
         className
       )}
+      style={variant === 'secondary' ? { backgroundColor: 'var(--bg-surface)' } : variant === 'primary' ? { backgroundColor: 'var(--accent)' } : undefined}
       {...props}
     >
-      {loading ? <Loader2 size={14} className="animate-spin" /> : Icon && <Icon size={14} />}
+      {loading ? <Loader2 size={13} className="animate-spin" /> : Icon && <Icon size={13} />}
       {children}
-      {IconRight && !loading && <IconRight size={14} />}
+      {IconRight && !loading && <IconRight size={13} />}
     </button>
   );
 }

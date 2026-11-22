@@ -8,6 +8,7 @@ import AppLayout from './components/layout/AppLayout.jsx';
 // Auth
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
+import Landing from './pages/Landing.jsx';
 
 // Dashboards
 import StudentOverview from './pages/student/Overview.jsx';
@@ -33,7 +34,10 @@ import HistoricalPractice from './pages/shared/HistoricalPractice.jsx';
 import RiskCalculator from './pages/shared/RiskCalculator.jsx';
 import AICoach from './pages/shared/AICoach.jsx';
 import Tests from './pages/shared/Tests.jsx';
+import Assignments from './pages/shared/Assignments.jsx';
 import LearningHub from './pages/shared/LearningHub.jsx';
+import TradingDictionary from './pages/shared/TradingDictionary.jsx';
+import PracticalScenarios from './pages/shared/PracticalScenarios.jsx';
 import Analytics from './pages/shared/Analytics.jsx';
 import Disputes from './pages/shared/Disputes.jsx';
 import Settings from './pages/shared/Settings.jsx';
@@ -56,7 +60,7 @@ function ProtectedRoute({ children, roles }) {
 function RoleRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Landing />;
   const defaults = { STUDENT: '/student', TRADER: '/trader', MENTOR: '/mentor', INSTITUTE: '/institute' };
   return <Navigate to={defaults[user.role] ?? '/login'} replace />;
 }
@@ -77,11 +81,14 @@ function AppRoutes() {
         <Route path="trading-lab" element={<DemoTradingLab />} />
         <Route path="fictional-market" element={<FictionalMarket />} />
         <Route path="historical-practice" element={<HistoricalPractice />} />
+        <Route path="practical-scenarios" element={<PracticalScenarios />} />
+        <Route path="practical-scenarios/:scenarioId" element={<PracticalScenarios />} />
         <Route path="journal" element={<TradingJournal />} />
         <Route path="risk" element={<RiskCalculator />} />
         <Route path="ai-coach" element={<AICoach />} />
         <Route path="tests" element={<Tests />} />
         <Route path="learning" element={<LearningHub />} />
+        <Route path="dictionary" element={<TradingDictionary />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="mentors" element={<MyMentors />} />
         <Route path="disputes" element={<Disputes />} />
@@ -94,11 +101,14 @@ function AppRoutes() {
         <Route path="trading-lab" element={<DemoTradingLab />} />
         <Route path="fictional-market" element={<FictionalMarket />} />
         <Route path="historical-practice" element={<HistoricalPractice />} />
+        <Route path="practical-scenarios" element={<PracticalScenarios />} />
+        <Route path="practical-scenarios/:scenarioId" element={<PracticalScenarios />} />
         <Route path="journal" element={<TradingJournal />} />
         <Route path="risk" element={<RiskCalculator />} />
         <Route path="ai-coach" element={<AICoach />} />
         <Route path="tests" element={<Tests />} />
         <Route path="learning" element={<LearningHub />} />
+        <Route path="dictionary" element={<TradingDictionary />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>
@@ -109,7 +119,11 @@ function AppRoutes() {
         <Route path="students" element={<MentorStudents />} />
         <Route path="invitations" element={<MentorInvitations />} />
         <Route path="tests" element={<Tests />} />
-        <Route path="assignments" element={<Tests />} />
+        <Route path="assignments" element={<Assignments />} />
+        <Route path="dictionary" element={<TradingDictionary />} />
+        <Route path="historical-practice" element={<HistoricalPractice />} />
+        <Route path="practical-scenarios" element={<PracticalScenarios />} />
+        <Route path="practical-scenarios/:scenarioId" element={<PracticalScenarios />} />
         <Route path="trade-reviews" element={<MentorStudents />} />
         <Route path="findings" element={<Disputes />} />
         <Route path="disputes" element={<Disputes />} />
@@ -126,7 +140,11 @@ function AppRoutes() {
         <Route path="cohorts" element={<InstituteCohorts />} />
         <Route path="invitations" element={<MentorInvitations />} />
         <Route path="assessments" element={<Tests />} />
-        <Route path="assignments" element={<Tests />} />
+        <Route path="assignments" element={<Assignments />} />
+        <Route path="dictionary" element={<TradingDictionary />} />
+        <Route path="historical-practice" element={<HistoricalPractice />} />
+        <Route path="practical-scenarios" element={<PracticalScenarios />} />
+        <Route path="practical-scenarios/:scenarioId" element={<PracticalScenarios />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>

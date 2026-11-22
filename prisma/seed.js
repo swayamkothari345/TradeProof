@@ -3,6 +3,63 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// ─── Synthetic candle generator (mirrors scenarios.service.js) ───────────────
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function makeSyntheticCandles(startPrice, numCandles, trendFactor, startDateISO, seed = 42) {
+  const rand = mulberry32(seed);
+  const candles = [];
+  let price = startPrice;
+  const startDate = new Date(startDateISO);
+  for (let i = 0; i < numCandles; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+    const drift = trendFactor * 0.004;
+    const vol = 0.015;
+    const change = drift + (rand() - 0.5) * vol * 2;
+    const open = price;
+    const close = price * (1 + change);
+    const high = Math.max(open, close) * (1 + rand() * 0.008);
+    const low = Math.min(open, close) * (1 - rand() * 0.008);
+    candles.push({
+      time: date.toISOString().slice(0, 10),
+      open: +open.toFixed(2), high: +high.toFixed(2),
+      low: +low.toFixed(2), close: +close.toFixed(2),
+      volume: Math.floor(rand() * 1000000 + 200000),
+    });
+    price = close;
+  }
+  return candles;
+}
+
+function makeScenarioCharts(startPrice, trendFactor, outcomeDirection, numBefore = 30, numAfter = 15) {
+  const beforeStart = new Date('2024-01-02');
+  const afterStart = new Date('2024-02-02');
+  const afterTrend = outcomeDirection === 'UP' ? 0.8 : outcomeDirection === 'DOWN' ? -0.8 : 0.1;
+  const chartBefore = { candles: makeSyntheticCandles(startPrice, numBefore, trendFactor, beforeStart.toISOString().slice(0, 10), 101) };
+  const lastPrice = chartBefore.candles.at(-1)?.close ?? startPrice;
+  const chartAfter = { candles: makeSyntheticCandles(lastPrice, numAfter, afterTrend, afterStart.toISOString().slice(0, 10), 202) };
+  return { chartBefore, chartAfter };
+}
+
+const DEFAULT_RUBRIC = {
+  criteria: [
+    { key: 'direction', name: 'Direction', maxScore: 30, description: 'Did you pick the correct market direction?' },
+    { key: 'reasoning_quality', name: 'Reasoning Quality', maxScore: 25, description: 'How thorough and market-aware is your reasoning?' },
+    { key: 'risk_management', name: 'Risk Management', maxScore: 25, description: 'Did you define stop-loss and target levels?' },
+    { key: 'news_analysis', name: 'News Analysis', maxScore: 10, description: 'Did you incorporate the news event into your decision?' },
+    { key: 'uncertainty', name: 'Uncertainty', maxScore: 10, description: 'Did you acknowledge market uncertainty?' },
+  ],
+};
+
 async function main() {
   console.log('Seeding TradeProof database...');
 
@@ -229,6 +286,7 @@ async function main() {
         durationMin: 20,
         status: 'PUBLISHED',
         isSelfTest: true,
+        isSystem: true,
       },
     });
 
@@ -322,6 +380,153 @@ async function main() {
     const existing = await prisma.learningResource.findUnique({ where: { slug: r.slug } });
     if (!existing) {
       await prisma.learningResource.create({ data: r });
+    }
+  }
+
+  // ─── Trading Scenarios ───────────────────────────────────────────────────
+  const scenarioSeeds = [
+    {
+      slug: 'nifty-rbi-rate-hold',
+      title: 'NIFTY — RBI Holds Rates Unexpectedly',
+      instrument: 'NIFTY',
+      instrumentType: 'INDEX',
+      difficulty: 'BEGINNER',
+      description: 'NIFTY has been in a 3-week consolidation range of 22,200–22,800. The RBI monetary policy meeting concludes today. Markets expected a 25 bps rate cut but RBI holds rates and signals a data-dependent stance.',
+      context: 'NIFTY has been trading sideways for 3 weeks after a sharp rally. FII flows have been mixed. The broader market breadth is neutral. The RBI decision is the primary catalyst today.',
+      newsHeadline: 'RBI holds repo rate at 6.5%, signals data-dependent approach — no cut this quarter',
+      newsBody: 'The Reserve Bank of India held the repo rate unchanged at 6.5% citing sticky core inflation. Governor noted global uncertainty and said the MPC will remain focused on withdrawal of accommodation. Markets had priced in a 70% probability of a cut.',
+      newsCategory: 'POLICY',
+      outcomeDirection: 'DOWN',
+      outcome: 'Markets initially fell sharply as the rate-hold disappointed. NIFTY broke below 22,200 support and closed down 1.8% on the day. Rate-sensitive sectors — banking, real estate, and auto — led the decline.',
+      teachingPoints: [
+        'Buy the rumour, sell the news — if a rate cut was priced in, the hold is a negative surprise regardless of the absolute level.',
+        'Watch support levels before a catalyst event. A break below consolidation on news is a high-probability continuation move.',
+        'RBI policy outcomes affect rate-sensitive sectors most — banking stocks often react more sharply than the index.',
+      ],
+      startPrice: 22500,
+      trendFactor: 0.1,
+      orderIndex: 1,
+    },
+    {
+      slug: 'reliance-earnings-beat',
+      title: 'RELIANCE — Strong Q2 Earnings Beat',
+      instrument: 'RELIANCE',
+      instrumentType: 'EQUITY',
+      difficulty: 'BEGINNER',
+      description: 'RELIANCE has been underperforming the index for two months, trading near its 200-DMA at ₹2,780. Q2 FY25 results are due after market close today. Analyst consensus expects 8% YoY revenue growth.',
+      context: 'RELIANCE has lagged the broader market due to concerns about refining margins and retail segment growth. The stock is at a critical technical level — the 200-DMA. Results will determine if the multi-month base holds.',
+      newsHeadline: 'Reliance Q2 results: Net profit up 18% YoY, beats estimates on strong Jio and Retail performance',
+      newsBody: 'Reliance Industries reported Q2 net profit of ₹18,900 crore, up 18% year-on-year, well ahead of analyst estimates of ₹16,500 crore. Jio platforms added 8 million subscribers and retail segment revenue grew 22%. Refining margins came in below expectations but were offset by digital and retail strength.',
+      newsCategory: 'EARNINGS',
+      outcomeDirection: 'UP',
+      outcome: 'RELIANCE gapped up 4.2% the next morning and continued to rally through the week, gaining 7% over 5 sessions. The stock broke out above its 200-DMA and attracted fresh institutional buying.',
+      teachingPoints: [
+        'A strong earnings beat in multiple segments often sustains a multi-day rally — not just a single-day pop.',
+        'Technical context matters: a beat at a key support level (200-DMA) is more powerful than the same beat in mid-air.',
+        'Diversified conglomerate results require reading segment-by-segment — a miss in one segment does not negate a broad beat.',
+      ],
+      startPrice: 2780,
+      trendFactor: -0.15,
+      orderIndex: 2,
+    },
+    {
+      slug: 'banknifty-fdmc-preview',
+      title: 'BANKNIFTY — US Fed Decision Day',
+      instrument: 'BANKNIFTY',
+      instrumentType: 'INDEX',
+      difficulty: 'INTERMEDIATE',
+      description: 'BANKNIFTY is trading at 48,500, up 12% over the last 2 months in a strong uptrend. The US Federal Reserve rate decision is due tonight at 11:30 PM IST. CME FedWatch shows 65% probability of a 25 bps cut.',
+      context: 'Indian banking stocks have rallied strongly on expectations of global rate easing. BANKNIFTY is at an all-time high zone. The global risk-on sentiment has driven FII inflows of ₹22,000 crore in the last month. Tonight\'s Fed meeting is the key near-term risk.',
+      newsHeadline: 'Fed cuts rates 25 bps but signals only one more cut in 2025 — fewer than market expected',
+      newsBody: 'The Federal Reserve cut rates by 25 basis points as expected but the dot plot showed only one additional cut in 2025 versus the two cuts markets had priced in. Fed Chair Powell said the labour market remains resilient and they will be patient. US 10-year yields rose 10 bps on the hawkish guidance.',
+      newsCategory: 'MACRO',
+      outcomeDirection: 'DOWN',
+      outcome: 'BANKNIFTY opened down 1.4% the following session on US futures weakness. The index gave back 3% over 3 sessions before stabilising. The cut was priced in; the hawkish guidance was not. FII selling resumed for 2 days.',
+      teachingPoints: [
+        'A "dovish surprise" needs to beat consensus — when the Fed delivers exactly what was priced in plus a hawkish twist, equities sell off.',
+        'At all-time highs, the risk:reward for holding overnight into major macro events is asymmetric — the downside tends to be sharper than the upside.',
+        'Global rate decisions affect Indian markets via FII flows and bond yield signals, not just directly through banking margins.',
+      ],
+      startPrice: 48500,
+      trendFactor: 0.6,
+      orderIndex: 3,
+    },
+    {
+      slug: 'tcs-margin-miss',
+      title: 'TCS — Q3 Revenue Miss with Margin Warning',
+      instrument: 'TCS',
+      instrumentType: 'EQUITY',
+      difficulty: 'INTERMEDIATE',
+      description: 'TCS has been in a steady uptrend, trading at ₹4,150, near its 52-week high. Q3 results arrive today. Consensus expects 6–7% constant currency (CC) revenue growth and EBIT margin of 24.5%.',
+      context: 'The IT sector has been buoyed by expectations of a US soft landing and increased discretionary tech spending. TCS\'s last two quarters beat estimates. However, some analysts flagged concerns about BFSI (Banking/Financial Services) client spending slowdown in the US.',
+      newsHeadline: 'TCS Q3: CC revenue growth 4.2% YoY, below estimates; management guides for margin pressure in H2',
+      newsBody: 'TCS reported Q3 constant currency revenue growth of 4.2%, below the 6.5% consensus estimate. EBIT margin came in at 24.0%, versus 24.5% expected. Management cited delays in BFSI client decisions and elevated sub-contracting costs. They guided for margin pressure to persist through H2 FY25 due to wage hike impact.',
+      newsCategory: 'EARNINGS',
+      outcomeDirection: 'DOWN',
+      outcome: 'TCS fell 5.8% on results day and dragged the entire IT sector down. The stock spent the next 2 weeks between ₹3,850–₹3,950 as analysts cut target prices. NIFTY IT index fell 2.5% on the day.',
+      teachingPoints: [
+        'A miss on the primary revenue metric combined with forward guidance cut is the most damaging earnings outcome — both present and future earnings disappoint.',
+        'Sector contagion is real: a TCS miss hits the entire NIFTY IT index as the bellwether for the sector.',
+        'Near 52-week highs, valuation is stretched — a miss has more room to disappoint than the same miss at a 52-week low.',
+      ],
+      startPrice: 4150,
+      trendFactor: 0.4,
+      orderIndex: 4,
+    },
+    {
+      slug: 'nifty-budget-day',
+      title: 'NIFTY — Union Budget: Tax Changes Announced',
+      instrument: 'NIFTY',
+      instrumentType: 'INDEX',
+      difficulty: 'ADVANCED',
+      description: 'Union Budget day. NIFTY is at 23,200. The Finance Minister is presenting the budget live. Markets are pricing in infrastructure spending boost and no changes to capital gains tax. STT reduction is an additional expectation in derivatives segments.',
+      context: 'Pre-budget rally of 4% over 2 weeks on expectations of fiscal stimulus. Auto, infra, and defence have outperformed. FIIs have been net buyers ₹18,000 crore in the last month. Options data shows heavy put writing at 23,000 and call selling at 23,500.',
+      newsHeadline: 'Budget 2025: LTCG tax on equities raised to 15% from 10%; STCG raised to 25% from 20%; STT on derivatives doubled',
+      newsBody: 'Finance Minister announces LTCG tax hike to 15% (from 10%) and STCG to 25% (from 20%) on listed equities. STT on futures and options doubled to fund financial literacy initiatives. Infrastructure outlay increased by 11% to ₹11.11 lakh crore. Personal income tax slabs revised favourably for middle income groups.',
+      newsCategory: 'POLICY',
+      outcomeDirection: 'DOWN',
+      outcome: 'Markets crashed 2.8% intraday. NIFTY tested 22,500 before partial recovery to 22,850 at close. The tax hike and STT increase outweighed the infra boost. FIIs sold ₹7,200 crore on budget day. F&O volumes dropped sharply with the STT announcement affecting sentiment.',
+      teachingPoints: [
+        'On high-expectation event days (budget, elections), "buy the rumour, sell the news" operates at scale — a 4% pre-event rally implies high expectations that must be exceeded to justify holding.',
+        'Tax policy changes are binary and unpredictable. No technical analysis helps you predict a LTCG hike. Cash or hedges before high-uncertainty events protect capital.',
+        'Mixed budget outcomes (some positive, some negative) tend to be net negative because the "bad" parts drive immediate selling while the "good" parts take time to reflect in earnings.',
+        'Options put writing at 23,000 means a lot of participants need NIFTY to stay above 23,000 — when it breaks, panic selling accelerates as put writers hedge.',
+      ],
+      startPrice: 23200,
+      trendFactor: 0.5,
+      orderIndex: 5,
+    },
+  ];
+
+  for (const s of scenarioSeeds) {
+    const existing = await prisma.tradingScenario.findUnique({ where: { slug: s.slug } });
+    if (!existing) {
+      const { chartBefore, chartAfter } = makeScenarioCharts(s.startPrice, s.trendFactor, s.outcomeDirection);
+      await prisma.tradingScenario.create({
+        data: {
+          slug: s.slug,
+          title: s.title,
+          instrument: s.instrument,
+          instrumentType: s.instrumentType,
+          difficulty: s.difficulty,
+          description: s.description,
+          context: s.context,
+          chartBefore,
+          chartAfter,
+          newsHeadline: s.newsHeadline,
+          newsBody: s.newsBody,
+          newsCategory: s.newsCategory,
+          outcomeDirection: s.outcomeDirection,
+          outcome: s.outcome,
+          teachingPoints: s.teachingPoints,
+          rubric: DEFAULT_RUBRIC,
+          dataSource: 'SYNTHETIC',
+          scenarioType: 'HISTORICAL_PRACTICE',
+          isPublished: true,
+          isSystem: true,
+          orderIndex: s.orderIndex,
+        },
+      });
     }
   }
 

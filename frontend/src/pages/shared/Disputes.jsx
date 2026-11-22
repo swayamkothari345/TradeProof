@@ -54,8 +54,8 @@ export default function Disputes() {
       {!isMentor && (
         <>
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Rule Findings</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <h3 className="section-title mb-3">Rule Findings</h3>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>
               If you believe a finding is incorrect, you can submit a dispute. The original finding is always preserved in the audit trail.
             </p>
             {!findings?.length ? (
@@ -93,7 +93,7 @@ export default function Disputes() {
       )}
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <h3 className="section-title mb-3">
           {isMentor ? 'Student Disputes to Review' : 'My Disputes'}
         </h3>
         {!disputes?.length ? (
@@ -109,10 +109,10 @@ export default function Disputes() {
                       <span className="text-xs text-gray-500">{d.finding?.ruleVersion?.rule?.name}</span>
                       <span className={findingBadge[d.finding?.status] ?? 'badge-gray'}>{d.finding?.status?.replace(/_/g, ' ')}</span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1"><strong>Reason:</strong> {d.reason}</p>
-                    {d.evidence && <p className="text-xs text-gray-500 mt-1"><strong>Evidence:</strong> {d.evidence}</p>}
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}><strong>Reason:</strong> {d.reason}</p>
+                    {d.evidence && <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}><strong>Evidence:</strong> {d.evidence}</p>}
                     {d.resolution && (
-                      <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/60 rounded text-xs">
+                      <div className="mt-2 p-2 rounded text-xs" style={{ backgroundColor: 'var(--bg-raised)' }}>
                         <strong>Resolution:</strong> {d.resolution}
                       </div>
                     )}
@@ -141,7 +141,7 @@ export default function Disputes() {
           </>
         }>
         <div className="space-y-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
             Explain why you believe this finding is incorrect. The original finding will be preserved. Your mentor will review and resolve.
           </p>
           <div>
@@ -155,7 +155,7 @@ export default function Disputes() {
               value={form.evidence} onChange={e => setForm(f => ({ ...f, evidence: e.target.value }))} />
           </div>
           {submitMutation.error && (
-            <p className="text-xs text-red-600 dark:text-red-400">{submitMutation.error?.response?.data?.message}</p>
+            <p className="text-xs" style={{ color: 'var(--neg)' }}>{submitMutation.error?.response?.data?.message}</p>
           )}
         </div>
       </Modal>
@@ -177,11 +177,18 @@ export default function Disputes() {
             <div className="flex gap-3">
               {['ACCEPTED', 'REJECTED'].map(s => (
                 <button key={s} type="button" onClick={() => setResolveForm(f => ({ ...f, status: s }))}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${
-                    resolveForm.status === s
-                      ? s === 'ACCEPTED' ? 'border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700' : 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 hover:border-gray-300'
-                  }`}>
+                  className="flex-1 py-2 text-sm font-semibold rounded-lg transition-colors"
+                  style={{
+                    border: resolveForm.status === s
+                      ? `2px solid ${s === 'ACCEPTED' ? 'var(--pos)' : 'var(--neg)'}`
+                      : '2px solid var(--border)',
+                    backgroundColor: resolveForm.status === s
+                      ? s === 'ACCEPTED' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)'
+                      : 'transparent',
+                    color: resolveForm.status === s
+                      ? s === 'ACCEPTED' ? 'var(--pos)' : 'var(--neg)'
+                      : 'var(--text-3)',
+                  }}>
                   {s === 'ACCEPTED' ? 'Accept Dispute' : 'Reject Dispute'}
                 </button>
               ))}

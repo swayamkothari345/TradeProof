@@ -150,8 +150,9 @@ model User {
   resolvedDisputes    RuleDispute[]   @relation("MentorDisputes")
 
   // Test taking
-  testAssignments  TestAssignment[] @relation("UserAssignments")
-  testAttempts     TestAttempt[]
+  testAssignments     TestAssignment[] @relation("UserAssignments")
+  assignmentsCreated  TestAssignment[] @relation("MentorCreatedAssignments")
+  testAttempts        TestAttempt[]
 
   aiAnalyses       AIAnalysis[]
   notifications    Notification[]
@@ -161,6 +162,9 @@ model User {
   // Learning
   exerciseAssignments ExerciseAssignment[] @relation("UserExercises")
   assignedExercises   ExerciseAssignment[] @relation("AssignedByMentor")
+  learningProgress    LearningProgress[]
+  dailyChallenges     DailyChallengeAttempt[]
+  aiConversations     AIConversation[]
 
   refreshTokens    RefreshToken[]
   scenarioAttempts ScenarioAttempt[]
@@ -613,19 +617,33 @@ model TestOption {
 }
 
 model TestAssignment {
-  id           String   @id @default(cuid())
-  testId       String
-  test         Test     @relation(fields: [testId], references: [id])
-  assignedTo   String?
-  assignedUser User?    @relation("UserAssignments", fields: [assignedTo], references: [id])
-  cohortId     String?
-  cohort       Cohort?  @relation(fields: [cohortId], references: [id])
-  dueAt        DateTime?
-  assignedAt   DateTime @default(now())
+  id              String    @id @default(cuid())
+  testId          String?
+  test            Test?     @relation(fields: [testId], references: [id])
+  scenarioId      String?
+  scenario        TradingScenario? @relation("AssignedScenarios", fields: [scenarioId], references: [id])
+  assignedTo      String?
+  assignedUser    User?     @relation("UserAssignments", fields: [assignedTo], references: [id])
+  cohortId        String?
+  cohort          Cohort?   @relation(fields: [cohortId], references: [id])
+  assignedBy      String?
+  assignedByUser  User?     @relation("MentorCreatedAssignments", fields: [assignedBy], references: [id])
+  batchId         String?
+  title           String?
+  instructions    String?
+  startAt         DateTime?
+  dueAt           DateTime?
+  timeLimitMin    Int?
+  maxAttempts     Int       @default(1)
+  passingScore    Int?
+  assignedAt      DateTime  @default(now())
 
   @@index([testId])
+  @@index([scenarioId])
   @@index([assignedTo])
+  @@index([assignedBy])
   @@index([cohortId])
+  @@index([batchId])
 }
 
 model TestAttempt {
@@ -711,6 +729,32 @@ model ExerciseAssignment {
   @@index([exerciseId])
 }
 
+model LearningProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId     String   // frontend lesson ID, e.g. "fund-01"
+  completedAt  DateTime @default(now())
+  quizScore    Int?
+  quizMaxScore Int?
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model DailyChallengeAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeDate String   // "YYYY-MM-DD"
+  score         Int      @default(0)
+  maxScore      Int      @default(3)
+  completedAt   DateTime @default(now())
+
+  @@unique([userId, challengeDate])
+  @@index([userId])
+}
+
 // ─── Feedback ─────────────────────────────────────────────────────────────
 
 model Feedback {
@@ -741,6 +785,31 @@ model AIAnalysis {
   periodEnd       DateTime?
 
   @@index([userId])
+}
+
+// ─── AI Conversations ─────────────────────────────────────────────────────────
+
+model AIConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String      @default("New Conversation")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AIMessage[]
+
+  @@index([userId])
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String         // "user" | "assistant"
+  content        String
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId])
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────
@@ -842,6 +911,7 @@ model TradingScenario {
   updatedAt       DateTime   @updatedAt
 
   attempts        ScenarioAttempt[]
+  assignments     TestAssignment[] @relation("AssignedScenarios")
 
   @@index([instrument])
   @@index([difficulty])

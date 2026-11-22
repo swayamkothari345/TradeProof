@@ -29,6 +29,22 @@ export async function getCohortMembers(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function addCohortMember(req, res, next) {
+  try {
+    const { studentId } = req.body;
+    if (!studentId) return res.status(400).json({ success: false, message: 'studentId required.' });
+    const data = await cohortsService.addCohortMember(req.user.id, req.params.id, studentId);
+    return success(res, data, 'Member added.');
+  } catch (err) { next(err); }
+}
+
+export async function removeCohortMember(req, res, next) {
+  try {
+    await cohortsService.removeCohortMember(req.user.id, req.params.id, req.params.studentId);
+    return success(res, null, 'Member removed.');
+  } catch (err) { next(err); }
+}
+
 export async function getInstituteStudents(req, res, next) {
   try {
     const data = await cohortsService.getInstituteStudents(req.user.id);

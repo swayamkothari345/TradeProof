@@ -7,7 +7,7 @@
  * clearly labelled as educational — not real historical market data.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -37,6 +37,14 @@ export default function HistoricalPractice() {
   const [error, setError] = useState(null);
 
   const qc = useQueryClient();
+
+  // Auto-trigger load when navigating here with a pre-set scenarioId (e.g. from Tests page)
+  useEffect(() => {
+    if (scenarioId && phase === 'loading-scenario') {
+      handleSelectScenario(scenarioId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSelectScenario(id) {
     setError(null);
@@ -141,7 +149,7 @@ function ScenarioList({ onSelect, error }) {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <AlertTriangle size={28} className="text-red-500" />
-        <p className="text-sm text-gray-600 dark:text-gray-400">Could not load scenarios.</p>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>Could not load scenarios.</p>
         <Button variant="secondary" icon={RefreshCw} onClick={() => refetch()}>Retry</Button>
       </div>
     );
@@ -151,20 +159,22 @@ function ScenarioList({ onSelect, error }) {
 
   return (
     <div className="space-y-5">
-      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+      <div className="p-3 rounded-lg"
+        style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+        <p className="text-[12px] leading-relaxed" style={{ color: 'var(--warn)' }}>
           <strong>Educational Scenarios.</strong> Chart data is synthetic and generated for learning purposes.
           It does not represent real historical market data. No trading recommendations are made.
         </p>
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-2)' }}>
         Each scenario presents a market situation with news context. Make a BUY / SELL / WAIT decision,
         explain your reasoning, and get scored on multiple dimensions — not just whether you picked the right direction.
       </p>
 
       {error && (
-        <div className="text-sm text-red-600 dark:text-red-400 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2">
+        <div className="p-3 rounded-lg flex items-center gap-2 text-[13px]"
+          style={{ color: 'var(--neg)', backgroundColor: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)' }}>
           <AlertTriangle size={14} /> {error}
         </div>
       )}
@@ -181,7 +191,7 @@ function ScenarioList({ onSelect, error }) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{s.title}</h3>
+                      <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{s.title}</h3>
                       <span className={
                         s.difficulty === 'BEGINNER' ? 'badge-green'
                         : s.difficulty === 'INTERMEDIATE' ? 'badge-amber'
@@ -190,14 +200,15 @@ function ScenarioList({ onSelect, error }) {
                       <span className="badge-gray">{s.instrument}</span>
                       {s.newsCategory && <span className="badge-blue">{s.newsCategory}</span>}
                       {completed && (
-                        <span className={`text-xs font-semibold ${attempt.score >= 60 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        <span className="text-xs font-semibold"
+                          style={{ color: attempt.score >= 60 ? 'var(--pos)' : 'var(--warn)' }}>
                           <CheckCircle size={12} className="inline mr-0.5" />{attempt.score}%
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{s.description}</p>
+                    <p className="text-[13px] line-clamp-2" style={{ color: 'var(--text-2)' }}>{s.description}</p>
                     {s.newsHeadline && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic line-clamp-1">
+                      <p className="text-[11px] mt-2 italic line-clamp-1" style={{ color: 'var(--text-3)' }}>
                         <Newspaper size={10} className="inline mr-1" />"{s.newsHeadline}"
                       </p>
                     )}
@@ -222,44 +233,45 @@ function ScenarioList({ onSelect, error }) {
 function ScenarioIntro({ scenario, onContinue, onBack }) {
   return (
     <div className="max-w-2xl space-y-5">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm hover:underline"
+        style={{ color: 'var(--accent)' }}>
         <ArrowLeft size={14} /> Back to Scenarios
       </button>
 
       <div>
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{scenario.title}</h2>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{scenario.title}</h2>
           <span className={scenario.difficulty === 'BEGINNER' ? 'badge-green' : scenario.difficulty === 'INTERMEDIATE' ? 'badge-amber' : 'badge-red'}>
             {scenario.difficulty}
           </span>
           <span className="badge-gray">{scenario.instrument}</span>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{scenario.description}</p>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>{scenario.description}</p>
       </div>
 
       {/* Market context */}
       <div className="card p-5">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+        <h3 className="section-title mb-2 flex items-center gap-2">
           <BarChart2 size={14} /> Market Context
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{scenario.context}</p>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-2)' }}>{scenario.context}</p>
       </div>
 
       {/* News */}
       {scenario.newsHeadline && (
-        <div className="card p-5 border-l-4 border-teal-500">
+        <div className="card p-5" style={{ borderLeft: '4px solid var(--accent)' }}>
           <div className="flex items-start gap-3">
-            <Newspaper size={16} className="text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
+            <Newspaper size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--accent)' }} />
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">BREAKING NEWS</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>BREAKING NEWS</span>
                 {scenario.newsCategory && <span className="badge-blue">{scenario.newsCategory}</span>}
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug mb-2">
+              <h3 className="text-sm font-semibold leading-snug mb-2" style={{ color: 'var(--text)' }}>
                 {scenario.newsHeadline}
               </h3>
               {scenario.newsBody && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{scenario.newsBody}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-2)' }}>{scenario.newsBody}</p>
               )}
             </div>
           </div>
@@ -269,21 +281,21 @@ function ScenarioIntro({ scenario, onContinue, onBack }) {
       {/* Rubric preview */}
       {scenario.rubricCriteria?.length > 0 && (
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+          <h3 className="section-title mb-3 flex items-center gap-2">
             <Target size={14} /> How you will be scored
           </h3>
           <div className="space-y-2">
             {scenario.rubricCriteria.map(c => (
               <div key={c.name} className="flex items-center justify-between text-sm">
-                <span className="text-gray-700 dark:text-gray-300">{c.name}</span>
+                <span style={{ color: 'var(--text-2)' }}>{c.name}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">{c.description}</span>
-                  <span className="text-xs font-medium text-gray-500 w-12 text-right">{c.maxScore} pts</span>
+                  <span className="text-xs" style={{ color: 'var(--text-3)' }}>{c.description}</span>
+                  <span className="text-xs font-medium w-12 text-right" style={{ color: 'var(--text-3)' }}>{c.maxScore} pts</span>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+          <p className="text-xs mt-3" style={{ color: 'var(--text-3)' }}>
             Direction alone is not enough — your reasoning quality, risk management, and news analysis all count.
           </p>
         </div>
@@ -325,37 +337,38 @@ function ScenarioDecision({ scenario, submitting, error, onSubmit, onBack }) {
 
   return (
     <div className="max-w-4xl space-y-5">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm hover:underline"
+        style={{ color: 'var(--accent)' }}>
         <ArrowLeft size={14} /> Back to Scenarios
       </button>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{scenario.title}</h2>
-        <p className="text-xs text-gray-400 mt-0.5">Synthetic educational data · {scenario.instrument} · {scenario.instrumentType}</p>
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{scenario.title}</h2>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Synthetic educational data · {scenario.instrument} · {scenario.instrumentType}</p>
       </div>
 
       {/* Chart */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <h3 className="section-title">
             Price Chart — make your decision based on this data
           </h3>
           {lastPrice != null && (
-            <span className="text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--text)' }}>
               Last: {typeof lastPrice === 'number' ? lastPrice.toFixed(2) : lastPrice}
             </span>
           )}
         </div>
         {candles.length > 0 ? (
           <ErrorBoundary fallback={
-            <div className="h-[380px] flex items-center justify-center text-sm text-gray-400">
+            <div className="h-[380px] flex items-center justify-center text-sm" style={{ color: 'var(--text-3)' }}>
               Chart could not be rendered.
             </div>
           }>
             <PriceChart candles={candles} chartType="candlestick" height={380} />
           </ErrorBoundary>
         ) : (
-          <div className="h-[380px] flex items-center justify-center text-sm text-gray-400">
+          <div className="h-[380px] flex items-center justify-center text-sm" style={{ color: 'var(--text-3)' }}>
             No chart data available for this scenario.
           </div>
         )}
@@ -366,19 +379,24 @@ function ScenarioDecision({ scenario, submitting, error, onSubmit, onBack }) {
         <Button onClick={() => setShowForm(true)} className="w-full">Make My Decision</Button>
       ) : (
         <div className="card p-5 space-y-5">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Your Decision</h3>
+          <h3 className="section-title">Your Decision</h3>
 
           {/* BUY / SELL / WAIT */}
           <div className="flex gap-3">
             {['BUY', 'SELL', 'WAIT'].map(d => (
               <button key={d} onClick={() => setDecision(d)}
-                className={`flex-1 py-3 text-sm font-bold rounded-lg border-2 transition-colors ${
-                  decision === d
-                    ? d === 'BUY'  ? 'border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                    : d === 'SELL' ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                    :                'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}>
+                className="flex-1 py-3 text-sm font-bold rounded-lg transition-colors"
+                style={{
+                  border: decision === d
+                    ? `2px solid ${d === 'BUY' ? 'var(--pos)' : d === 'SELL' ? 'var(--neg)' : 'var(--warn)'}`
+                    : '2px solid var(--border)',
+                  backgroundColor: decision === d
+                    ? d === 'BUY' ? 'var(--pos-bg)' : d === 'SELL' ? 'var(--neg-bg)' : 'var(--warn-bg)'
+                    : 'transparent',
+                  color: decision === d
+                    ? d === 'BUY' ? 'var(--pos)' : d === 'SELL' ? 'var(--neg)' : 'var(--warn)'
+                    : 'var(--text-3)',
+                }}>
                 {d}
               </button>
             ))}
@@ -387,19 +405,19 @@ function ScenarioDecision({ scenario, submitting, error, onSubmit, onBack }) {
           {/* Reasoning */}
           <div>
             <label className="label">
-              Your Reasoning <span className="text-gray-400">(required — min 30 words for a good score)</span>
+              Your Reasoning <span style={{ color: 'var(--text-3)' }}>(required — min 30 words for a good score)</span>
             </label>
             <textarea className="input" rows={5}
               placeholder="Explain your decision... Consider the news impact, chart context, risk/reward, and what could go wrong."
               value={reasoning} onChange={e => setReasoning(e.target.value)} />
-            <p className="text-xs text-gray-400 mt-1">{reasoning.trim().split(/\s+/).filter(Boolean).length} words</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{reasoning.trim().split(/\s+/).filter(Boolean).length} words</p>
           </div>
 
           {/* Optional trade levels */}
           {decision && decision !== 'WAIT' && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">Trade Levels (optional — improves risk management score)</p>
-              <div className="grid grid-cols-3 gap-3">
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-3)' }}>Trade Levels (optional — improves risk management score)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="label">Entry Price</label>
                   <input type="number" step="0.01" className="input" placeholder="e.g. 2850"
@@ -424,14 +442,14 @@ function ScenarioDecision({ scenario, submitting, error, onSubmit, onBack }) {
             <label className="label">Confidence Level: {confidence}/10</label>
             <input type="range" min="1" max="10" value={confidence}
               onChange={e => setConfidence(Number(e.target.value))}
-              className="w-full accent-teal-600" />
+              className="w-full" style={{ accentColor: 'var(--accent)' }} />
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <span>1 — Very uncertain</span><span>10 — Very confident</span>
             </div>
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+            <div className="text-sm flex items-center gap-2" style={{ color: 'var(--neg)' }}>
               <AlertTriangle size={14} /> {error}
             </div>
           )}
@@ -444,7 +462,7 @@ function ScenarioDecision({ scenario, submitting, error, onSubmit, onBack }) {
             Submit & See Outcome
           </Button>
           {(!decision || reasoning.trim().length < 10) && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            <p className="text-xs text-center" style={{ color: 'var(--warn)' }}>
               {!decision ? 'Select BUY, SELL, or WAIT.' : 'Add more reasoning before submitting.'}
             </p>
           )}
@@ -465,18 +483,18 @@ function ScenarioResult({ scenario, attempt, onReset }) {
   const beforeCandles = scenario?.chartBefore?.candles ?? [];
 
   const directionIcon = scenario?.outcomeDirection === 'UP'
-    ? <TrendingUp size={18} className="text-green-500" />
+    ? <TrendingUp size={18} style={{ color: 'var(--pos)' }} />
     : scenario?.outcomeDirection === 'DOWN'
-    ? <TrendingDown size={18} className="text-red-500" />
+    ? <TrendingDown size={18} style={{ color: 'var(--neg)' }} />
     : <Minus size={18} className="text-gray-400" />;
 
-  const scoreColour = score >= 80 ? 'text-green-600 dark:text-green-400'
-    : score >= 60 ? 'text-teal-600 dark:text-teal-400'
-    : 'text-amber-600 dark:text-amber-400';
+  const scoreColor = score >= 80 ? 'var(--pos)' : score >= 60 ? 'var(--accent)' : 'var(--warn)';
+  const scoreBgColor = score >= 80 ? 'var(--pos)' : score >= 60 ? 'var(--accent)' : 'var(--warn)';
 
   return (
     <div className="max-w-4xl space-y-5">
-      <button onClick={onReset} className="flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline">
+      <button onClick={onReset} className="flex items-center gap-1 text-sm hover:underline"
+        style={{ color: 'var(--accent)' }}>
         <ArrowLeft size={14} /> Back to Scenarios
       </button>
 
@@ -484,8 +502,8 @@ function ScenarioResult({ scenario, attempt, onReset }) {
       <div className="card p-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{scenario.title} — Your Result</h2>
-            <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{scenario.title} — Your Result</h2>
+            <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: 'var(--text-2)' }}>
               {directionIcon}
               <span>Outcome: price moved <strong>{scenario.outcomeDirection?.toLowerCase() ?? '—'}</strong></span>
               <span>·</span>
@@ -493,42 +511,40 @@ function ScenarioResult({ scenario, attempt, onReset }) {
             </div>
           </div>
           <div className="text-right">
-            <span className={`text-4xl font-bold ${scoreColour}`}>{score}%</span>
-            <p className="text-xs text-gray-400 mt-1">
+            <span className="text-4xl font-bold" style={{ color: scoreColor }}>{score}%</span>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
               {score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Developing' : 'Needs Work'}
             </p>
           </div>
         </div>
 
         {/* Score bar */}
-        <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-          <div className={`h-2.5 rounded-full transition-all ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-teal-500' : 'bg-amber-500'}`}
-            style={{ width: `${score}%` }} />
+        <div className="mt-4 w-full rounded-full h-2.5" style={{ backgroundColor: 'var(--bg-raised)' }}>
+          <div className="h-2.5 rounded-full transition-all"
+            style={{ width: `${score}%`, backgroundColor: scoreBgColor }} />
         </div>
       </div>
 
       {/* Rubric breakdown */}
       {rubric.length > 0 && (
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+          <h3 className="section-title mb-3 flex items-center gap-2">
             <Target size={14} /> Scoring Breakdown
           </h3>
           <div className="space-y-3">
             {rubric.map(c => {
               const pct = Math.round((c.awarded / c.max) * 100);
+              const pctColor = pct >= 80 ? 'var(--pos)' : pct >= 50 ? 'var(--warn)' : 'var(--neg)';
               return (
                 <div key={c.name}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">{c.name}</span>
-                    <span className={`font-semibold ${pct >= 80 ? 'text-green-600 dark:text-green-400' : pct >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {c.awarded}/{c.max}
-                    </span>
+                    <span className="font-medium" style={{ color: 'var(--text-2)' }}>{c.name}</span>
+                    <span className="font-semibold" style={{ color: pctColor }}>{c.awarded}/{c.max}</span>
                   </div>
-                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-1">
-                    <div className={`h-1.5 rounded-full ${pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${pct}%` }} />
+                  <div className="w-full rounded-full h-1.5 mb-1" style={{ backgroundColor: 'var(--bg-raised)' }}>
+                    <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: pctColor }} />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{c.comment}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>{c.comment}</p>
                 </div>
               );
             })}
@@ -539,24 +555,24 @@ function ScenarioResult({ scenario, attempt, onReset }) {
       {/* Feedback */}
       {feedbackText && (
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+          <h3 className="section-title mb-2 flex items-center gap-2">
             <BookOpen size={14} /> Feedback
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line">{feedbackText}</p>
+          <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--text-2)' }}>{feedbackText}</p>
         </div>
       )}
 
       {/* What actually happened — chart after */}
       <div className="card p-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <h3 className="section-title mb-3">
           What happened next — post-decision chart (synthetic)
         </h3>
         {afterCandles.length > 0 ? (
-          <ErrorBoundary fallback={<div className="h-[300px] flex items-center justify-center text-sm text-gray-400">Chart unavailable.</div>}>
+          <ErrorBoundary fallback={<div className="h-[300px] flex items-center justify-center text-sm" style={{ color: 'var(--text-3)' }}>Chart unavailable.</div>}>
             <PriceChart candles={[...beforeCandles, ...afterCandles]} chartType="candlestick" height={300} />
           </ErrorBoundary>
         ) : (
-          <div className="h-[200px] flex items-center justify-center text-sm text-gray-400">
+          <div className="h-[200px] flex items-center justify-center text-sm" style={{ color: 'var(--text-3)' }}>
             Post-event chart not available.
           </div>
         )}
@@ -564,11 +580,11 @@ function ScenarioResult({ scenario, attempt, onReset }) {
 
       {/* Your reasoning recap */}
       {attempt?.reasoning && (
-        <div className="card p-5 bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">YOUR REASONING (submitted)</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 italic">"{attempt.reasoning}"</p>
+        <div className="card p-5" style={{ backgroundColor: 'var(--bg-raised)' }}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>YOUR REASONING (submitted)</h3>
+          <p className="text-sm italic" style={{ color: 'var(--text-2)' }}>"{attempt.reasoning}"</p>
           {attempt.stopLoss != null && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: 'var(--text-3)' }}>
               Entry: {attempt.entryPrice ?? '—'} · SL: {Number(attempt.stopLoss).toFixed(2)} · Target: {attempt.target ?? '—'}
             </p>
           )}
@@ -577,13 +593,14 @@ function ScenarioResult({ scenario, attempt, onReset }) {
 
       {/* Teaching points */}
       {teachingPoints.length > 0 && (
-        <div className="card p-5 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
-          <h3 className="text-sm font-semibold text-teal-700 dark:text-teal-400 mb-3 flex items-center gap-2">
+        <div className="card p-5"
+          style={{ backgroundColor: 'var(--accent-subtle)', border: '1px solid var(--accent-muted)' }}>
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--accent)' }}>
             <BookOpen size={14} /> Key Teaching Points
           </h3>
           <ul className="space-y-2">
             {teachingPoints.map((point, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-teal-800 dark:text-teal-300">
+              <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--accent)' }}>
                 <CheckCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{point}</span>
               </li>

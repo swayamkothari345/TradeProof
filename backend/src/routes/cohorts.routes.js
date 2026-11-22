@@ -11,5 +11,7 @@ router.get('/', cohortsController.getCohorts);
 router.post('/', cohortsController.createCohort);
 router.delete('/:id', cohortsController.deleteCohort);
 router.get('/:id/members', cohortsController.getCohortMembers);
+router.post('/:id/members', cohortsController.addCohortMember);
+router.delete('/:id/members/:studentId', cohortsController.removeCohortMember);
 
 export default router;

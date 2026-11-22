@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -136,6 +136,9 @@ export const testsApi = {
   startAttempt: (id) => api.post(`/tests/${id}/start`),
   submitAttempt: (attemptId, data) => api.post(`/tests/attempts/${attemptId}/submit`, data),
   getResult: (attemptId) => api.get(`/tests/attempts/${attemptId}/result`),
+  createAssignment: (data) => api.post('/tests/assignments', data),
+  getAssignments: () => api.get('/tests/assignments'),
+  getAssignmentBatch: (batchId) => api.get(`/tests/assignments/${batchId}`),
 };
 
 export const connectionsApi = {
@@ -157,6 +160,14 @@ export const analyticsApi = {
 export const aicoachApi = {
   generate: () => api.post('/ai-coach/generate'),
   latest: () => api.get('/ai-coach/latest'),
+  ask: (question) => api.post('/ai-coach/ask', { question }),
+  // Conversations
+  conversations: () => api.get('/ai-coach/conversations'),
+  createConversation: (title) => api.post('/ai-coach/conversations', { title }),
+  getConversation: (id) => api.get(`/ai-coach/conversations/${id}`),
+  updateConversation: (id, data) => api.patch(`/ai-coach/conversations/${id}`, data),
+  deleteConversation: (id) => api.delete(`/ai-coach/conversations/${id}`),
+  sendMessage: (convId, content) => api.post(`/ai-coach/conversations/${convId}/messages`, { content }),
 };
 
 export const notificationsApi = {
@@ -175,6 +186,13 @@ export const learningApi = {
   resource: (id) => api.get(`/learning/resources/${id}`),
   exercises: () => api.get('/learning/exercises'),
   completeExercise: (id) => api.patch(`/learning/exercises/${id}/complete`),
+  // Progress
+  progress: () => api.get('/learning/progress'),
+  saveProgress: (data) => api.post('/learning/progress', data),
+  // Daily challenge
+  dailyChallenge: () => api.get('/learning/daily-challenge'),
+  submitChallenge: (data) => api.post('/learning/daily-challenge/submit', data),
+  streak: () => api.get('/learning/daily-challenge/streak'),
 };
 
 export const scenariosApi = {
@@ -194,5 +212,7 @@ export const cohortsApi = {
   create: (data) => api.post('/cohorts', data),
   delete: (id) => api.delete(`/cohorts/${id}`),
   members: (id) => api.get(`/cohorts/${id}/members`),
+  addMember: (cohortId, studentId) => api.post(`/cohorts/${cohortId}/members`, { studentId }),
+  removeMember: (cohortId, studentId) => api.delete(`/cohorts/${cohortId}/members/${studentId}`),
   students: () => api.get('/cohorts/students'),
 };

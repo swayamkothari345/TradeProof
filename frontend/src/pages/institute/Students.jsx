@@ -28,7 +28,7 @@ export default function InstituteStudents() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
           All students enrolled in your institute.
         </p>
         <span className="badge-blue">{students.length} total</span>
@@ -60,12 +60,13 @@ export default function InstituteStudents() {
 
             return (
               <div key={c.id} className="card p-4 flex items-center gap-4">
-                <div className="w-9 h-9 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center text-sm font-semibold text-teal-700 dark:text-teal-400 flex-shrink-0">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+                  style={{ backgroundColor: 'var(--accent-subtle)', color: 'var(--accent)' }}>
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{student?.email}</p>
+                  <p className="font-medium truncate" style={{ color: 'var(--text)' }}>{name}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>{student?.email}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <span className="badge-green text-xs">Active</span>

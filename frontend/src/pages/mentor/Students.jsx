@@ -19,7 +19,7 @@ export default function MentorStudents() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-sm" style={{ color: 'var(--text-2)' }}>
         Students you are connected to. All access is consent-based.
       </p>
       {!conns.length ? (
@@ -80,7 +80,7 @@ export function MentorFeedbackPage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <p className="text-sm text-gray-500 dark:text-gray-400">Send written feedback to a connected student.</p>
+      <p className="text-sm" style={{ color: 'var(--text-2)' }}>Send written feedback to a connected student.</p>
       <div className="card p-5 space-y-4">
         <div>
           <label className="label">Student</label>
@@ -106,8 +106,8 @@ export function MentorFeedbackPage() {
           <textarea className="input" rows={4} placeholder="Write your feedback..."
             value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} />
         </div>
-        {err && <p className="text-xs text-red-600 dark:text-red-400">{err}</p>}
-        {msg && <p className="text-xs text-green-600 dark:text-green-400">{msg}</p>}
+        {err && <p className="text-xs" style={{ color: 'var(--neg)' }}>{err}</p>}
+        {msg && <p className="text-xs" style={{ color: 'var(--pos)' }}>{msg}</p>}
         <Button onClick={send}>Send Feedback</Button>
       </div>
     </div>

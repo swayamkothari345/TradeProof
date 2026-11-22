@@ -50,7 +50,7 @@ export default function MentorInvitations() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
           Generate invitation codes to share with students. Students enter the code from their account.
         </p>
         <Button icon={Plus} onClick={() => setShowCreate(true)}>Create Invitation</Button>
@@ -58,7 +58,7 @@ export default function MentorInvitations() {
 
       {/* Connected students */}
       <div className="card p-5">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+        <h3 className="section-title mb-3 flex items-center gap-2">
           <Users size={15} />Active Connections ({connections?.length ?? 0})
         </h3>
         {connections?.length > 0 ? (
@@ -89,7 +89,7 @@ export default function MentorInvitations() {
 
       {/* Invitations */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Invitations</h3>
+        <h3 className="section-title mb-3">Invitations</h3>
         {invitations?.length > 0 ? (
           <div className="table-container">
             <table className="table">
@@ -99,12 +99,16 @@ export default function MentorInvitations() {
                   <tr key={inv.id}>
                     <td>
                       <div className="flex items-center gap-2">
-                        <code className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                        <code className="font-mono text-sm px-2 py-0.5 rounded"
+                          style={{ backgroundColor: 'var(--bg-raised)', color: 'var(--text-2)' }}>
                           {inv.code}
                         </code>
                         <button onClick={() => copyCode(inv.code)}
-                          className="p-1 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
-                          {copied === inv.code ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+                          className="p-1 transition-colors"
+                          style={{ color: 'var(--text-3)' }}
+                          onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}>
+                          {copied === inv.code ? <Check size={13} style={{ color: 'var(--pos)' }} /> : <Copy size={13} />}
                         </button>
                       </div>
                     </td>
@@ -147,7 +151,7 @@ export default function MentorInvitations() {
               onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} />
           </div>
           {createMutation.error && (
-            <p className="text-xs text-red-600 dark:text-red-400">
+            <p className="text-xs" style={{ color: 'var(--neg)' }}>
               {createMutation.error?.response?.data?.message || 'Failed to create invitation.'}
             </p>
           )}

@@ -34,7 +34,7 @@ export default function MyMentors() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
           Mentors you are connected to can view your permitted journal entries and rule findings.
         </p>
         <Button icon={Link} onClick={() => setShowJoin(true)}>Join a Mentor</Button>
@@ -50,18 +50,19 @@ export default function MyMentors() {
             <div key={c.id} className="card p-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: 'var(--warn-bg)' }}>
+                    <span className="text-sm font-bold" style={{ color: 'var(--warn)' }}>
                       {c.mentor?.profile?.firstName?.[0]}{c.mentor?.profile?.lastName?.[0]}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <p className="font-medium" style={{ color: 'var(--text)' }}>
                       {c.mentor?.profile?.firstName} {c.mentor?.profile?.lastName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{c.mentor?.email}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>{c.mentor?.email}</p>
                     {c.mentor?.mentorProfile?.specialisation && (
-                      <p className="text-xs text-teal-600 dark:text-teal-400 mt-0.5">{c.mentor.mentorProfile.specialisation}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--accent)' }}>{c.mentor.mentorProfile.specialisation}</p>
                     )}
                   </div>
                 </div>
@@ -74,8 +75,8 @@ export default function MyMentors() {
                   </button>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-500">Permitted access: Journal entries, Rule findings</p>
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-3)' }}>Permitted access: Journal entries, Rule findings</p>
               </div>
             </div>
           ))}
@@ -94,7 +95,7 @@ export default function MyMentors() {
           </>
         }>
         <div className="space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm" style={{ color: 'var(--text-2)' }}>
             Enter the invitation code your mentor shared with you.
           </p>
           <div>
@@ -102,8 +103,8 @@ export default function MyMentors() {
             <input className="input font-mono uppercase tracking-widest" placeholder="e.g. AB12CD"
               value={code} onChange={e => setCode(e.target.value.toUpperCase())} />
           </div>
-          {joinError && <p className="text-sm text-red-600 dark:text-red-400">{joinError}</p>}
-          <p className="text-xs text-gray-400">
+          {joinError && <p className="text-sm" style={{ color: 'var(--neg)' }}>{joinError}</p>}
+          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
             By joining, you consent to your mentor viewing your trading journal and rule findings.
           </p>
         </div>

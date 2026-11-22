@@ -3,7 +3,7 @@ import { createError } from '../middleware/errorHandler.js';
 import { getMarketPrice } from './market.service.js';
 
 export async function getPortfolio(userId) {
-  const portfolio = await prisma.virtualPortfolio.findFirst({
+  let portfolio = await prisma.virtualPortfolio.findFirst({
     where: { userId, portfolioType: 'DEMO', isActive: true },
     include: {
       positions: { orderBy: { openedAt: 'desc' } },
@@ -13,7 +13,21 @@ export async function getPortfolio(userId) {
       },
     },
   });
-  if (!portfolio) throw createError(404, 'Portfolio not found.');
+
+  // Auto-create a DEMO portfolio if the user doesn't have one yet
+  if (!portfolio) {
+    await prisma.virtualPortfolio.create({
+      data: { userId, name: 'Demo Portfolio', portfolioType: 'DEMO' },
+    });
+    portfolio = await prisma.virtualPortfolio.findFirst({
+      where: { userId, portfolioType: 'DEMO', isActive: true },
+      include: {
+        positions: { orderBy: { openedAt: 'desc' } },
+        orders: { orderBy: { placedAt: 'desc' }, take: 20 },
+      },
+    });
+  }
+
   return portfolio;
 }
 

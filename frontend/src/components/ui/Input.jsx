@@ -9,8 +9,8 @@ export function Input({ label, error, hint, className, ...props }) {
         className={clsx('input', error && 'border-red-500 focus:ring-red-500', className)}
         {...props}
       />
-      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+      {error && <p className="mt-1 text-xs" style={{ color: 'var(--neg)' }}>{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{hint}</p>}
     </div>
   );
 }
@@ -25,8 +25,8 @@ export function Select({ label, error, hint, className, children, ...props }) {
       >
         {children}
       </select>
-      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+      {error && <p className="mt-1 text-xs" style={{ color: 'var(--neg)' }}>{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{hint}</p>}
     </div>
   );
 }
@@ -39,8 +39,8 @@ export function Textarea({ label, error, hint, className, ...props }) {
         className={clsx('input resize-none', error && 'border-red-500 focus:ring-red-500', className)}
         {...props}
       />
-      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+      {error && <p className="mt-1 text-xs" style={{ color: 'var(--neg)' }}>{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{hint}</p>}
     </div>
   );
 }

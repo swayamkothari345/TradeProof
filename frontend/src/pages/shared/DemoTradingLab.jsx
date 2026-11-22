@@ -2,10 +2,10 @@ import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   TrendingUp, TrendingDown, RefreshCw, AlertTriangle,
-  ChevronUp, ChevronDown, Newspaper,
+  ChevronUp, ChevronDown, Newspaper, Search,
 } from 'lucide-react';
 import { portfolioApi, marketApi } from '../../services/api.js';
-import PriceChart, { calcRsi, calcMacd } from '../../components/chart/PriceChart.jsx';
+import PriceChart, { calcRsi, calcMacd, RsiChart, MacdChart } from '../../components/chart/PriceChart.jsx';
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
@@ -18,10 +18,11 @@ const TF_LIMITS  = { '1m': 120, '5m': 120, '15m': 120, '1h': 120, '4h': 120, '1d
 // ─── Sentiment badge ───────────────────────────────────────────────────────
 
 function SentimentBadge({ sentiment }) {
-  const base = 'inline-block text-[10px] px-1.5 py-0.5 rounded font-medium';
-  if (sentiment === 'positive') return <span className={`${base} bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400`}>Bullish</span>;
-  if (sentiment === 'negative') return <span className={`${base} bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400`}>Bearish</span>;
-  return <span className={`${base} bg-gray-100 dark:bg-gray-800 text-gray-500`}>Neutral</span>;
+  if (sentiment === 'positive')
+    return <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--pos-bg)', color: 'var(--pos)' }}>Bullish</span>;
+  if (sentiment === 'negative')
+    return <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--neg-bg)', color: 'var(--neg)' }}>Bearish</span>;
+  return <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: 'var(--bg-raised)', color: 'var(--text-3)' }}>Neutral</span>;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -34,7 +35,8 @@ export default function DemoTradingLab() {
   const [selectedSymbol, setSelectedSymbol] = useState('NIFTY_50');
   const [timeframe, setTimeframe]           = useState('1d');
   const [chartType, setChartType]           = useState('candlestick');
-  const [indicators, setIndicators]         = useState({ sma20: false, ema9: false, ema21: false });
+  const [indicators, setIndicators]         = useState({ sma20: false, ema9: false, ema21: false, bb: false, rsi: false, macd: false });
+  const [watchSearch, setWatchSearch]       = useState('');
 
   // Order form
   const [orderSide, setOrderSide]   = useState('BUY');
@@ -186,11 +188,12 @@ export default function DemoTradingLab() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
         <AlertTriangle size={32} className="text-red-500" />
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>
           {portfolioError?.response?.data?.message || 'Could not load your portfolio. Make sure the backend is running.'}
         </p>
         <button onClick={() => refetchPortfolio()}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-teal-600 border border-teal-300 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors">
+          className="flex items-center gap-2 px-4 py-2 text-[13px] rounded-lg transition-colors"
+          style={{ color: 'var(--accent)', border: '1px solid var(--accent)' }}>
           <RefreshCw size={14} /> Retry
         </button>
       </div>
@@ -202,10 +205,11 @@ export default function DemoTradingLab() {
   return (
     <div className="space-y-4">
       {/* Disclaimer */}
-      <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-amber-700 dark:text-amber-400">
-          <strong>Paper Trading — Simulated Data.</strong> NIFTY 50 and RELIANCE prices are algorithmically simulated for educational practice. This is not live exchange data. No real money or exchange is involved. For fictional company experiments, use the Fictional Market module.
+      <div className="flex items-start gap-3 p-3 rounded-lg"
+        style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+        <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--warn)' }} />
+        <p className="text-[12px] leading-relaxed" style={{ color: 'var(--warn)' }}>
+          <strong>Paper Trading — Simulated Data.</strong> All instruments (indices and equities) are algorithmically simulated for educational practice. This is not live exchange data and does not reflect real market prices. No real money or exchange is involved.
         </p>
       </div>
 
@@ -219,9 +223,10 @@ export default function DemoTradingLab() {
           { label: 'Overall Return', value: `${Number(overallRet) >= 0 ? '+' : ''}${overallRet}%`, cls: pnlClass(totalValue - initial) },
         ].map(({ label, value, sub, cls }) => (
           <div key={label} className="card p-3">
-            <p className="text-xs text-gray-500 uppercase tracking-wider truncate">{label}</p>
-            <p className={`text-lg font-bold mt-0.5 ${cls ?? 'text-gray-900 dark:text-gray-100'}`}>{value}</p>
-            {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+            <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: 'var(--text-3)' }}>{label}</p>
+            <p className={`text-[16px] font-bold mt-0.5 tabular-nums ${cls ?? ''}`}
+              style={!cls ? { color: 'var(--text)' } : undefined}>{value}</p>
+            {sub && <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>{sub}</p>}
           </div>
         ))}
       </div>
@@ -231,39 +236,58 @@ export default function DemoTradingLab() {
 
         {/* ── Col 1: Watchlist ──────────────────────────────────────────── */}
         <div className="card p-0 overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Watchlist</p>
+          <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-3)' }}>Watchlist</p>
+            <div className="relative">
+              <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
+              <input
+                value={watchSearch}
+                onChange={e => setWatchSearch(e.target.value)}
+                placeholder="Search…"
+                className="w-full pl-6 pr-2 py-1 text-[11px] rounded outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-raised)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                }}
+              />
+            </div>
           </div>
           {realCompanies.length === 0 && (
-            <p className="p-4 text-center text-xs text-gray-400">Connecting to market…</p>
+            <p className="p-4 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>Connecting to market…</p>
           )}
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {realCompanies.map(co => {
+          <div className="overflow-y-auto" style={{ maxHeight: '480px' }}>
+            {realCompanies.filter(co => {
+              const q = watchSearch.toLowerCase();
+              return !q || co.symbol.toLowerCase().includes(q) || co.name.toLowerCase().includes(q) || co.sector?.toLowerCase().includes(q);
+            }).map(co => {
               const isSelected  = co.symbol === selectedSymbol;
               const isPositive  = Number(co.changePct ?? 0) >= 0;
               return (
                 <button
                   key={co.symbol}
                   onClick={() => selectSymbol(co.symbol)}
-                  className={`w-full text-left px-3 py-2.5 transition-colors ${
-                    isSelected
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border-l-2 border-indigo-500'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-l-2 border-transparent'
-                  }`}
+                  className="w-full text-left px-3 py-2.5 transition-colors border-l-2"
+                  style={{
+                    borderLeftColor: isSelected ? '#6366F1' : 'transparent',
+                    backgroundColor: isSelected ? 'rgba(99,102,241,0.08)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-raised)'; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{co.symbol}</span>
-                    <span className={`text-xs font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <span className="text-[13px] font-bold" style={{ color: 'var(--text)' }}>{co.symbol}</span>
+                    <span className="text-[11px] font-semibold" style={{ color: isPositive ? 'var(--pos)' : 'var(--neg)' }}>
                       {isPositive ? '+' : ''}{Number(co.changePct ?? 0).toFixed(2)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{co.name}</span>
-                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">₹{Number(co.price ?? 0).toFixed(2)}</span>
+                    <span className="text-[10px] truncate" style={{ color: 'var(--text-3)' }}>{co.name}</span>
+                    <span className="text-[11px] font-mono" style={{ color: 'var(--text-2)' }}>₹{Number(co.price ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
-                    <span className="text-[10px] text-gray-400">{co.sector}</span>
-                    <span className={`text-[10px] ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                    <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{co.sector}</span>
+                    <span className="text-[10px]" style={{ color: isPositive ? 'var(--pos)' : 'var(--neg)' }}>
                       {isPositive ? '+' : ''}{Number(co.change ?? 0).toFixed(2)}
                     </span>
                   </div>
@@ -279,23 +303,25 @@ export default function DemoTradingLab() {
           {/* Company header */}
           <div className="card p-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedSymbol}</span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{selectedCompany?.name}</span>
+              <span className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>{selectedSymbol}</span>
+              <span className="text-[13px]" style={{ color: 'var(--text-3)' }}>{selectedCompany?.name}</span>
               {selectedCompany?.sector && (
-                <span className="text-[11px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded">{selectedCompany.sector}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: 'var(--bg-raised)', color: 'var(--text-3)' }}>{selectedCompany.sector}</span>
               )}
             </div>
-            <span className="text-xl font-mono font-bold text-gray-900 dark:text-gray-100">
+            <span className="text-[18px] font-mono font-bold" style={{ color: 'var(--text)' }}>
               ₹{Number(currentPrice).toFixed(2)}
             </span>
             {selectedCompany && (
-              <span className={`flex items-center gap-0.5 text-sm font-semibold ${Number(selectedCompany.changePct ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {Number(selectedCompany.changePct ?? 0) >= 0 ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <span className="flex items-center gap-0.5 text-[13px] font-semibold"
+                style={{ color: Number(selectedCompany.changePct ?? 0) >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+                {Number(selectedCompany.changePct ?? 0) >= 0 ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 {Number(selectedCompany.changePct ?? 0) >= 0 ? '+' : ''}{Number(selectedCompany.change ?? 0).toFixed(2)}
                 &nbsp;({Number(selectedCompany.changePct ?? 0) >= 0 ? '+' : ''}{Number(selectedCompany.changePct ?? 0).toFixed(2)}%)
               </span>
             )}
-            <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
+            <div className="ml-auto flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-3)' }}>
               {selectedCompany?.dayHigh != null && <span>H: ₹{Number(selectedCompany.dayHigh).toFixed(2)}</span>}
               {selectedCompany?.dayLow  != null && <span>L: ₹{Number(selectedCompany.dayLow).toFixed(2)}</span>}
               {selectedCompany?.volume  != null && <span>Vol: {(selectedCompany.volume / 1000).toFixed(0)}K</span>}
@@ -308,44 +334,63 @@ export default function DemoTradingLab() {
             <div className="flex gap-0.5 flex-wrap">
               {TIMEFRAMES.map(tf => (
                 <button key={tf} onClick={() => setTimeframe(tf)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    timeframe === tf
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}>
+                  className="px-2 py-1 text-[11px] rounded transition-all"
+                  style={{
+                    backgroundColor: timeframe === tf ? '#6366F1' : 'transparent',
+                    color: timeframe === tf ? '#fff' : 'var(--text-3)',
+                  }}>
                   {tf}
                 </button>
               ))}
             </div>
 
-            <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
+            <div className="w-px h-5 hidden sm:block" style={{ backgroundColor: 'var(--border)' }} />
 
             {/* Chart type */}
             {[['candlestick', 'Candles'], ['line', 'Line']].map(([t, label]) => (
               <button key={t} onClick={() => setChartType(t)}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  chartType === t
-                    ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}>
+                className="px-2 py-1 text-[11px] rounded transition-all"
+                style={{
+                  backgroundColor: chartType === t ? 'var(--bg-raised)' : 'transparent',
+                  color: chartType === t ? 'var(--text)' : 'var(--text-3)',
+                  border: chartType === t ? '1px solid var(--border-strong)' : '1px solid transparent',
+                }}>
                 {label}
               </button>
             ))}
 
-            <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
+            <div className="w-px h-5 hidden sm:block" style={{ backgroundColor: 'var(--border)' }} />
 
             {/* Overlay indicators */}
             {[
-              ['sma20', 'SMA 20', 'text-amber-600 dark:text-amber-400 bg-amber-500/15 border-amber-400/40'],
-              ['ema9',  'EMA 9',  'text-violet-600 dark:text-violet-400 bg-violet-500/15 border-violet-400/40'],
-              ['ema21', 'EMA 21', 'text-sky-600 dark:text-sky-400 bg-sky-500/15 border-sky-400/40'],
-            ].map(([key, label, activeClass]) => (
+              { key: 'sma20', label: 'SMA 20', color: 'var(--warn)',               bg: 'var(--warn-bg)' },
+              { key: 'ema9',  label: 'EMA 9',  color: 'var(--badge-purple-color)', bg: 'var(--badge-purple-bg)' },
+              { key: 'ema21', label: 'EMA 21', color: 'var(--info)',               bg: 'var(--info-bg)' },
+              { key: 'bb',    label: 'BB (20)', color: '#818cf8',                   bg: 'rgba(99,102,241,0.1)' },
+            ].map(({ key, label, color, bg }) => (
               <button key={key} onClick={() => toggleIndicator(key)}
-                className={`px-2 py-1 text-xs rounded border transition-colors ${
-                  indicators[key]
-                    ? activeClass
-                    : 'text-gray-500 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}>
+                className="px-2 py-1 text-[11px] rounded border transition-all"
+                style={indicators[key]
+                  ? { backgroundColor: bg, color, borderColor: color + '60' }
+                  : { backgroundColor: 'transparent', color: 'var(--text-3)', borderColor: 'transparent' }
+                }>
+                {label}
+              </button>
+            ))}
+
+            <div className="w-px h-5 hidden sm:block" style={{ backgroundColor: 'var(--border)' }} />
+
+            {/* Sub-chart indicators */}
+            {[
+              { key: 'rsi',  label: 'RSI', color: '#818cf8', bg: 'rgba(129,140,248,0.1)' },
+              { key: 'macd', label: 'MACD', color: 'var(--accent)', bg: 'var(--accent-subtle)' },
+            ].map(({ key, label, color, bg }) => (
+              <button key={key} onClick={() => toggleIndicator(key)}
+                className="px-2 py-1 text-[11px] rounded border transition-all"
+                style={indicators[key]
+                  ? { backgroundColor: bg, color, borderColor: color + '60' }
+                  : { backgroundColor: 'transparent', color: 'var(--text-3)', borderColor: 'transparent' }
+                }>
                 {label}
               </button>
             ))}
@@ -358,15 +403,15 @@ export default function DemoTradingLab() {
                 <LoadingSpinner />
               </div>
             ) : candles.length === 0 ? (
-              <div className="flex items-center justify-center h-80 text-sm text-gray-400">
+              <div className="flex items-center justify-center h-80 text-[13px]" style={{ color: 'var(--text-3)' }}>
                 No candle data for {selectedSymbol}/{timeframe}
               </div>
             ) : (
               <ErrorBoundary
                 fallback={
                   <div className="flex flex-col items-center justify-center h-80 gap-3">
-                    <AlertTriangle size={20} className="text-amber-500" />
-                    <p className="text-sm text-gray-500">Chart failed to render. Try a different timeframe.</p>
+                    <AlertTriangle size={20} style={{ color: 'var(--warn)' }} />
+                    <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>Chart failed to render. Try a different timeframe.</p>
                   </div>
                 }
               >
@@ -381,90 +426,132 @@ export default function DemoTradingLab() {
             )}
           </div>
 
+          {/* RSI sub-chart */}
+          {indicators.rsi && candles.length >= 20 && (
+            <div className="card p-0 overflow-hidden">
+              <div className="px-3 pt-2 pb-1 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--badge-purple-color)' }}>RSI (14)</span>
+                {(() => {
+                  const r = calcRsi(closes, 14);
+                  const v = r[r.length - 1];
+                  return v !== null && v !== undefined ? (
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: v > 70 ? 'var(--neg)' : v < 30 ? 'var(--pos)' : 'var(--text-2)' }}>
+                      {v.toFixed(1)} {v > 70 ? '· Overbought' : v < 30 ? '· Oversold' : '· Neutral'}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+              <ErrorBoundary fallback={<div className="h-20" />}>
+                <RsiChart candles={candles} height={80} />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* MACD sub-chart */}
+          {indicators.macd && candles.length >= 35 && (
+            <div className="card p-0 overflow-hidden">
+              <div className="px-3 pt-2 pb-1 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>MACD (12,26,9)</span>
+                {(() => {
+                  const { macdLine, histogram } = calcMacd(closes);
+                  const mv = macdLine[macdLine.length - 1];
+                  const hv = histogram[histogram.length - 1];
+                  return mv !== null && mv !== undefined ? (
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: mv >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+                      {mv.toFixed(2)} · Hist: <span style={{ color: hv != null && hv >= 0 ? 'var(--pos)' : 'var(--neg)' }}>{hv != null ? `${hv >= 0 ? '+' : ''}${hv.toFixed(2)}` : '—'}</span>
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+              <ErrorBoundary fallback={<div className="h-20" />}>
+                <MacdChart candles={candles} height={80} />
+              </ErrorBoundary>
+            </div>
+          )}
+
           {/* Technical indicators strip */}
           {closes.length >= 15 && (
             <div className="card p-3 grid grid-cols-3 gap-3 text-center">
               {/* RSI */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">RSI (14)</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>RSI (14)</p>
                 {latestRsi !== null ? (
                   <>
-                    <p className={`text-base font-bold mt-0.5 tabular-nums ${
-                      latestRsi > 70 ? 'text-red-600 dark:text-red-400'
-                      : latestRsi < 30 ? 'text-green-600 dark:text-green-400'
-                      : 'text-gray-900 dark:text-gray-100'
-                    }`}>{latestRsi.toFixed(1)}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
+                    <p className="text-[15px] font-bold mt-0.5 tabular-nums"
+                      style={{ color: latestRsi > 70 ? 'var(--neg)' : latestRsi < 30 ? 'var(--pos)' : 'var(--text)' }}>
+                      {latestRsi.toFixed(1)}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
                       {latestRsi > 70 ? 'Overbought' : latestRsi < 30 ? 'Oversold' : 'Neutral'}
                     </p>
-                    {/* Mini progress bar */}
-                    <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-raised)' }}>
                       <div
                         className={`h-full rounded-full ${latestRsi > 70 ? 'bg-red-500' : latestRsi < 30 ? 'bg-green-500' : 'bg-indigo-500'}`}
                         style={{ width: `${latestRsi}%` }}
                       />
                     </div>
                   </>
-                ) : <p className="text-sm text-gray-400 mt-1">—</p>}
+                ) : <p className="text-[13px] mt-1" style={{ color: 'var(--text-3)' }}>—</p>}
               </div>
 
               {/* MACD */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">MACD</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>MACD</p>
                 {latestMacd !== null ? (
                   <>
-                    <p className={`text-base font-bold mt-0.5 tabular-nums ${latestMacd >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <p className="text-[15px] font-bold mt-0.5 tabular-nums"
+                      style={{ color: latestMacd >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
                       {latestMacd.toFixed(2)}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      Hist: <span className={latestHistogram != null && latestHistogram >= 0 ? 'text-green-500' : 'text-red-500'}>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                      Hist: <span style={{ color: latestHistogram != null && latestHistogram >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
                         {latestHistogram != null ? `${latestHistogram >= 0 ? '+' : ''}${latestHistogram.toFixed(2)}` : '—'}
                       </span>
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
                       {latestMacd >= 0 ? 'Bullish momentum' : 'Bearish momentum'}
                     </p>
                   </>
-                ) : <p className="text-sm text-gray-400 mt-1">—</p>}
+                ) : <p className="text-[13px] mt-1" style={{ color: 'var(--text-3)' }}>—</p>}
               </div>
 
               {/* Last bar volume */}
               <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Last Volume</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Last Volume</p>
                 {candles.length > 0 ? (
                   <>
-                    <p className="text-base font-bold mt-0.5 tabular-nums text-gray-900 dark:text-gray-100">
+                    <p className="text-[15px] font-bold mt-0.5 tabular-nums" style={{ color: 'var(--text)' }}>
                       {(candles[candles.length - 1].volume / 1000).toFixed(1)}K
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{timeframe} bar</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{timeframe} bar</p>
                   </>
-                ) : <p className="text-sm text-gray-400 mt-1">—</p>}
+                ) : <p className="text-[13px] mt-1" style={{ color: 'var(--text-3)' }}>—</p>}
               </div>
             </div>
           )}
 
           {/* News Feed */}
           <div className="card p-0 overflow-hidden">
-            <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-              <Newspaper size={12} className="text-gray-500" />
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <div className="px-3 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+              <Newspaper size={12} style={{ color: 'var(--text-3)' }} />
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
                 News — {selectedSymbol}
               </p>
             </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-56 overflow-y-auto">
+            <div className="max-h-56 overflow-y-auto">
               {newsItems.length === 0 ? (
-                <p className="text-xs text-gray-400 p-4 text-center">No news available.</p>
+                <p className="text-[12px] p-4 text-center" style={{ color: 'var(--text-3)' }}>No news available.</p>
               ) : (
                 newsItems.slice(0, 6).map((item, i) => (
-                  <div key={i} className="px-3 py-2.5">
-                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-snug">{item.headline}</p>
+                  <div key={i} className="px-3 py-2.5" style={i > 0 ? { borderTop: '1px solid var(--border)' } : {}}>
+                    <p className="text-[12px] font-medium leading-snug" style={{ color: 'var(--text-2)' }}>{item.headline}</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <SentimentBadge sentiment={item.sentiment} />
-                      <span className="text-[10px] text-gray-400">{item.category}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{item.category}</span>
                       {item.timestamp && (
                         <>
-                          <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
-                          <span className="text-[10px] text-gray-400">{formatDateTime(item.timestamp)}</span>
+                          <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>·</span>
+                          <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{formatDateTime(item.timestamp)}</span>
                         </>
                       )}
                     </div>
@@ -480,21 +567,23 @@ export default function DemoTradingLab() {
 
           {/* Order form */}
           <div className="card p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Place Order</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-3)' }}>Place Order</p>
 
             {/* BUY / SELL toggle */}
-            <div className="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden mb-3">
+            <div className="flex rounded-md overflow-hidden mb-3" style={{ border: '1px solid var(--border)' }}>
               {['BUY', 'SELL'].map(side => (
                 <button key={side} type="button"
-                  className={`flex-1 py-2 text-sm font-bold transition-colors ${
-                    orderSide === side
-                      ? side === 'BUY' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-750'
-                  }`}
+                  className="flex-1 py-2 text-[13px] font-bold transition-colors"
+                  style={{
+                    backgroundColor: orderSide === side
+                      ? (side === 'BUY' ? 'var(--pos)' : 'var(--neg)')
+                      : 'var(--bg-raised)',
+                    color: orderSide === side ? '#fff' : 'var(--text-3)',
+                  }}
                   onClick={() => setOrderSide(side)}>
                   {side === 'BUY'
-                    ? <TrendingUp size={13} className="inline mr-1" />
-                    : <TrendingDown size={13} className="inline mr-1" />}
+                    ? <TrendingUp size={12} className="inline mr-1" />
+                    : <TrendingDown size={12} className="inline mr-1" />}
                   {side}
                 </button>
               ))}
@@ -502,20 +591,21 @@ export default function DemoTradingLab() {
 
             <form onSubmit={handlePlaceOrder} className="space-y-3">
               {/* Symbol + live price */}
-              <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{selectedSymbol}</span>
-                <span className="text-sm font-mono text-gray-700 dark:text-gray-300">₹{Number(currentPrice).toFixed(2)}</span>
+              <div className="p-2 rounded flex items-center justify-between"
+                style={{ backgroundColor: 'var(--bg-raised)' }}>
+                <span className="text-[13px] font-bold" style={{ color: 'var(--text)' }}>{selectedSymbol}</span>
+                <span className="text-[13px] font-mono" style={{ color: 'var(--text-2)' }}>₹{Number(currentPrice).toFixed(2)}</span>
               </div>
 
               {/* Order type */}
               <div className="flex gap-2">
                 {['MARKET', 'LIMIT'].map(ot => (
                   <button key={ot} type="button" onClick={() => setOrderType(ot)}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded transition-colors ${
-                      orderType === ot
-                        ? 'bg-indigo-600 text-white'
-                        : 'border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}>
+                    className="flex-1 py-1.5 text-[11px] font-semibold rounded transition-all"
+                    style={orderType === ot
+                      ? { backgroundColor: '#6366F1', color: '#fff', border: '1px solid transparent' }
+                      : { backgroundColor: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)' }
+                    }>
                     {ot}
                   </button>
                 ))}
@@ -530,7 +620,7 @@ export default function DemoTradingLab() {
                 </div>
               )}
               {orderType === 'MARKET' && (
-                <p className="text-xs text-gray-400">
+                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
                   Executes at market price — approx ₹{Number(currentPrice).toFixed(2)}
                 </p>
               )}
@@ -544,15 +634,16 @@ export default function DemoTradingLab() {
 
               {/* Order value preview */}
               {quantity && Number(quantity) > 0 && (
-                <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs space-y-1">
+                <div className="p-2 rounded space-y-1" style={{ backgroundColor: 'var(--bg-raised)' }}>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Order Value</span>
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{formatCurrency(orderValue)}</span>
+                    <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Order Value</span>
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--text)' }}>{formatCurrency(orderValue)}</span>
                   </div>
                   {orderSide === 'BUY' && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Available</span>
-                      <span className={`font-medium ${cashBalance >= orderValue ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                      <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>Available</span>
+                      <span className="text-[11px] font-medium"
+                        style={{ color: cashBalance >= orderValue ? 'var(--pos)' : 'var(--neg)' }}>
                         {formatCurrency(cashBalance)}
                       </span>
                     </div>
@@ -562,13 +653,13 @@ export default function DemoTradingLab() {
 
               {/* Notes */}
               <div>
-                <label className="label">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="label">Notes <span className="font-normal" style={{ color: 'var(--text-3)' }}>(optional)</span></label>
                 <input className="input" placeholder="Trade rationale…"
                   value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
 
-              {orderError   && <p className="text-xs text-red-600 dark:text-red-400">{orderError}</p>}
-              {orderSuccess && <p className="text-xs text-green-600 dark:text-green-400">{orderSuccess}</p>}
+              {orderError   && <p className="text-[12px]" style={{ color: 'var(--neg)' }}>{orderError}</p>}
+              {orderSuccess && <p className="text-[12px]" style={{ color: 'var(--pos)' }}>{orderSuccess}</p>}
 
               <Button type="submit" loading={placeMutation.isPending}
                 className={`w-full justify-center ${
@@ -584,12 +675,18 @@ export default function DemoTradingLab() {
           {/* Quick actions */}
           <div className="card p-3 flex gap-2">
             <button onClick={() => refreshPnlMutation.mutate()} disabled={refreshPnlMutation.isPending}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] rounded transition-all disabled:opacity-50"
+              style={{ color: 'var(--text-2)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-raised)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
               <RefreshCw size={11} className={refreshPnlMutation.isPending ? 'animate-spin' : ''} />
               Refresh P&L
             </button>
             <button onClick={() => setShowReset(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-red-500 dark:text-red-400 border border-red-300 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] rounded transition-all"
+              style={{ color: 'var(--neg)', border: '1px solid rgba(220,38,38,0.3)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(220,38,38,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
               <RefreshCw size={11} />
               Reset All
             </button>
@@ -597,22 +694,23 @@ export default function DemoTradingLab() {
 
           {/* Position in selected symbol */}
           {portfolio?.positions?.filter(p => p.instrument === selectedSymbol).map(pos => (
-            <div key={pos.id} className="card p-3 border-l-4 border-indigo-400 dark:border-indigo-500">
+            <div key={pos.id} className="card p-3" style={{ borderLeft: '3px solid #6366F1' }}>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Your {pos.instrument} Position</p>
+                <p className="text-[12px] font-semibold" style={{ color: 'var(--text-2)' }}>Your {pos.instrument} Position</p>
                 <button onClick={() => closeMutation.mutate(pos.id)} disabled={closeMutation.isPending}
-                  className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50">
+                  className="text-[11px] transition-colors disabled:opacity-50"
+                  style={{ color: 'var(--neg)' }}>
                   {closeMutation.isPending ? 'Closing…' : 'Close'}
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                <span className="text-gray-500">Qty</span>
-                <span className="font-medium text-gray-800 dark:text-gray-200 text-right">{pos.quantity}</span>
-                <span className="text-gray-500">Avg Price</span>
-                <span className="font-mono text-gray-800 dark:text-gray-200 text-right">{formatCurrency(pos.averagePrice)}</span>
-                <span className="text-gray-500">Cur Price</span>
-                <span className="font-mono text-gray-800 dark:text-gray-200 text-right">{formatCurrency(pos.currentPrice)}</span>
-                <span className="text-gray-500">Unreal P&L</span>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                <span style={{ color: 'var(--text-3)' }}>Qty</span>
+                <span className="font-medium text-right" style={{ color: 'var(--text)' }}>{pos.quantity}</span>
+                <span style={{ color: 'var(--text-3)' }}>Avg Price</span>
+                <span className="font-mono text-right" style={{ color: 'var(--text)' }}>{formatCurrency(pos.averagePrice)}</span>
+                <span style={{ color: 'var(--text-3)' }}>Cur Price</span>
+                <span className="font-mono text-right" style={{ color: 'var(--text)' }}>{formatCurrency(pos.currentPrice)}</span>
+                <span style={{ color: 'var(--text-3)' }}>Unreal P&L</span>
                 <span className={`font-mono font-semibold text-right ${pnlClass(pos.unrealisedPnl)}`}>{formatPnl(pos.unrealisedPnl)}</span>
               </div>
             </div>
@@ -623,10 +721,8 @@ export default function DemoTradingLab() {
       {/* ── Open positions table ─────────────────────────────────────────── */}
       {portfolio?.positions?.length > 0 && (
         <div className="card p-0 overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Open Positions ({portfolio.positions.length})
-            </h3>
+          <div className="px-4 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+            <h3 className="section-title">Open Positions ({portfolio.positions.length})</h3>
           </div>
           <div className="table-container">
             <table className="table">
@@ -638,20 +734,23 @@ export default function DemoTradingLab() {
               <tbody>
                 {portfolio.positions.map(pos => (
                   <tr key={pos.id}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                    className="cursor-pointer"
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-raised)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => selectSymbol(pos.instrument)}>
                     <td className="font-semibold">{pos.instrument}</td>
                     <td>{pos.quantity}</td>
                     <td className="font-mono text-xs">{formatCurrency(pos.averagePrice)}</td>
                     <td className="font-mono text-xs">{formatCurrency(pos.currentPrice)}</td>
-                    <td className="font-mono text-xs text-gray-500">{formatCurrency(pos.investedValue)}</td>
-                    <td className="font-mono text-xs">{formatCurrency(pos.currentValue)}</td>
-                    <td className={`font-mono text-xs font-semibold ${pnlClass(pos.unrealisedPnl)}`}>{formatPnl(pos.unrealisedPnl)}</td>
+                    <td className="font-mono text-[12px]" style={{ color: 'var(--text-3)' }}>{formatCurrency(pos.investedValue)}</td>
+                    <td className="font-mono text-[12px]">{formatCurrency(pos.currentValue)}</td>
+                    <td className={`font-mono text-[12px] font-semibold ${pnlClass(pos.unrealisedPnl)}`}>{formatPnl(pos.unrealisedPnl)}</td>
                     <td>
                       <button
                         onClick={e => { e.stopPropagation(); closeMutation.mutate(pos.id); }}
                         disabled={closeMutation.isPending}
-                        className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-40 transition-colors">
+                        className="text-[12px] disabled:opacity-40 transition-colors"
+                        style={{ color: 'var(--neg)' }}>
                         Close
                       </button>
                     </td>
@@ -665,8 +764,8 @@ export default function DemoTradingLab() {
 
       {/* ── Order history ─────────────────────────────────────────────────── */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Order History</h3>
+        <div className="px-4 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h3 className="section-title">Order History</h3>
         </div>
         {ordersData?.orders?.length > 0 ? (
           <div className="table-container">
@@ -682,17 +781,17 @@ export default function DemoTradingLab() {
                       <span className={o.side === 'BUY' ? 'badge-green' : 'badge-red'}>{o.side}</span>
                     </td>
                     <td>{o.quantity}</td>
-                    <td className="font-mono text-xs">{formatCurrency(o.price)}</td>
-                    <td className="font-mono text-xs">{formatCurrency(o.orderValue)}</td>
+                    <td className="font-mono text-[12px]">{formatCurrency(o.price)}</td>
+                    <td className="font-mono text-[12px]">{formatCurrency(o.orderValue)}</td>
                     <td><span className="badge-green">{o.status}</span></td>
-                    <td className="text-xs text-gray-400 whitespace-nowrap">{formatDateTime(o.placedAt)}</td>
+                    <td className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-3)' }}>{formatDateTime(o.placedAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 py-6 text-center">No orders placed yet.</p>
+          <p className="text-[13px] py-6 text-center" style={{ color: 'var(--text-3)' }}>No orders placed yet.</p>
         )}
       </div>
 

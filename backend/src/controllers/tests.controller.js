@@ -64,3 +64,24 @@ export async function getTestLibrary(req, res, next) {
     return success(res, tests);
   } catch (err) { next(err); }
 }
+
+export async function createBulkAssignment(req, res, next) {
+  try {
+    const result = await testsService.createBulkAssignment(req.user.id, req.body);
+    return created(res, result, 'Assignment created.');
+  } catch (err) { next(err); }
+}
+
+export async function getMentorAssignments(req, res, next) {
+  try {
+    const data = await testsService.getMentorAssignments(req.user.id);
+    return success(res, data);
+  } catch (err) { next(err); }
+}
+
+export async function getAssignmentBatch(req, res, next) {
+  try {
+    const data = await testsService.getAssignmentBatch(req.params.batchId, req.user.id);
+    return success(res, data);
+  } catch (err) { next(err); }
+}

@@ -40,18 +40,20 @@ export default class ErrorBoundary extends React.Component {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-8 gap-4">
-        <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+        <div className="flex items-center gap-3" style={{ color: 'var(--neg)' }}>
           <AlertTriangle size={22} />
           <span className="font-semibold text-sm">Something went wrong rendering this section.</span>
         </div>
         {this.state.error?.message && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded max-w-md text-center break-all">
+          <p className="text-xs font-mono px-3 py-2 rounded max-w-md text-center break-all"
+            style={{ color: 'var(--text-3)', backgroundColor: 'var(--bg-raised)' }}>
             {this.state.error.message}
           </p>
         )}
         <button
           onClick={() => this.reset()}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-teal-600 dark:text-teal-400 border border-teal-300 dark:border-teal-700 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors"
+          style={{ color: 'var(--accent)', border: '1px solid rgba(13,148,136,0.4)' }}
         >
           <RefreshCw size={14} />
           Try again
